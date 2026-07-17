@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="description"
+    content="Site oficial de Feras e Flores."
+  >
+
+  <title>Feras e Flores</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body data-page="public">
+  <div class="site-background" aria-hidden="true">
+    <span class="background-flower flower-one">✦</span>
+    <span class="background-flower flower-two">✿</span>
+    <span class="background-flower flower-three">✦</span>
+  </div>
+
+  <header class="site-header">
+    <a class="brand" href="index.html" aria-label="Feras e Flores">
+      <span class="brand-symbol">✦</span>
+
+      <span class="brand-text">
+        <strong id="site-name">Feras e Flores</strong>
+        <small>Arquivo oficial</small>
+      </span>
+    </a>
+
+    <button
+      id="menu-button"
+      class="menu-button"
+      type="button"
+      aria-label="Abrir menu"
+      aria-expanded="false"
+      aria-controls="main-navigation"
+    >
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+
+    <nav id="main-navigation" class="main-navigation">
+      <a href="#inicio">Início</a>
+      <a href="#atualizacoes">Atualizações</a>
+      <a href="#recursos">Recursos</a>
+      <a href="#comunidade">Comunidade</a>
+      <a href="#sobre">Sobre</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="inicio" class="hero-section">
+      <div class="hero-content">
+        <p class="eyebrow">BEM-VINDO AO ARQUIVO</p>
+
+        <h1>
+          Toda flor guarda uma história.
+          <span>Algumas deveriam permanecer enterradas.</span>
+        </h1>
+
+        <p id="site-subtitle" class="hero-description">
+          Notícias, personagens, recursos e registros do mundo de
+          Feras e Flores.
+        </p>
+
+        <form id="central-search-form" class="central-search">
+          <label for="central-search-input">
+            Pesquisar no arquivo
+          </label>
+
+          <div class="search-field">
+            <input
+              id="central-search-input"
+              type="search"
+              autocomplete="off"
+              spellcheck="false"
+              placeholder="Pesquise personagens, lugares e histórias..."
+            >
+
+            <button type="submit">
+              <span>Pesquisar</span>
+              <span aria-hidden="true">⌕</span>
+            </button>
+          </div>
+
+          <p class="search-hint">
+            Nomes, lugares, acontecimentos, arquivos e outras coisas.
+          </p>
+        </form>
+
+        <div
+          id="search-message"
+          class="search-message"
+          role="status"
+          aria-live="polite"
+          hidden
+        ></div>
+      </div>
+
+      <div class="hero-decoration" aria-hidden="true">
+        <div class="flower-emblem">
+          <span class="petal petal-one"></span>
+          <span class="petal petal-two"></span>
+          <span class="petal petal-three"></span>
+          <span class="petal petal-four"></span>
+          <span class="flower-center"></span>
+        </div>
+      </div>
+    </section>
+
+    <section id="atualizacoes" class="content-section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">REGISTROS RECENTES</p>
+          <h2>Atualizações</h2>
+        </div>
+
+        <button class="text-button" type="button">
+          Ver todas
+        </button>
+      </div>
+
+      <div id="latest-posts" class="cards-grid">
+        <article class="content-card empty-card">
+          <span class="card-icon">✦</span>
+          <h3>Nenhuma atualização publicada</h3>
+          <p>
+            As primeiras postagens aparecerão aqui quando forem
+            publicadas pelo painel.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="recursos" class="content-section muted-section">
+      <div class="section-heading">
+        <div>
+          <p class="eyebrow">MATERIAIS DO PROJETO</p>
+          <h2>Recursos</h2>
+        </div>
+      </div>
+
+      <div class="feature-grid">
+        <article class="feature-card">
+          <span class="feature-number">01</span>
+          <h3>Arquivos</h3>
+          <p>
+            Documentos, materiais de apoio e conteúdos disponíveis
+            para os jogadores.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-number">02</span>
+          <h3>Personagens</h3>
+          <p>
+            Registros conhecidos sobre as pessoas que atravessaram
+            esta história.
+          </p>
+        </article>
+
+        <article class="feature-card">
+          <span class="feature-number">03</span>
+          <h3>Comunidade</h3>
+          <p>
+            Descobertas, interpretações e criações compartilhadas
+            pela comunidade.
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section id="comunidade" class="content-section">
+      <div class="community-panel">
+        <div>
+          <p class="eyebrow">COMUNIDADE</p>
+          <h2>Uma história construída por descobertas</h2>
+          <p>
+            Feras e Flores também existe nas teorias, interpretações
+            e pistas encontradas por quem acompanha o projeto.
+          </p>
+        </div>
+
+        <div class="community-symbol" aria-hidden="true">
+          ✿
+        </div>
+      </div>
+    </section>
+
+    <section id="sobre" class="content-section about-section">
+      <p class="eyebrow">SOBRE O PROJETO</p>
+
+      <h2>
+        Há mundos que são encontrados.<br>
+        E há mundos que encontram você.
+      </h2>
+
+      <p>
+        Este é o arquivo público de Feras e Flores. Aqui serão
+        reunidas atualizações, informações de personagens, recursos
+        e registros relacionados ao projeto.
+      </p>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div>
+      <strong>Feras e Flores</strong>
+      <p>Nem toda história deveria ser encontrada.</p>
+    </div>
+
+    <a href="login.html">Área administrativa</a>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
