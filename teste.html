@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta name="robots" content="noindex, nofollow">
+
+  <title>Teste — Feras e Flores</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 30px;
+
+      background:
+        linear-gradient(
+          180deg,
+          #63bdd4,
+          #267eaa
+        );
+
+      color: #4b3550;
+
+      font-family:
+        "Trebuchet MS",
+        Verdana,
+        Arial,
+        sans-serif;
+    }
+
+    .test-panel {
+      width: min(100%, 760px);
+      margin: 0 auto;
+      padding: 20px;
+
+      border: 5px solid white;
+      border-radius: 22px;
+
+      background: #fff7d6;
+
+      box-shadow:
+        0 0 0 4px #287fa4,
+        0 9px 0 rgba(21, 93, 136, 0.35);
+    }
+
+    h1 {
+      margin: 0 0 8px;
+
+      color: #6b2148;
+    }
+
+    .subtitle {
+      margin: 0 0 24px;
+
+      color: #765e73;
+    }
+
+    .test-list {
+      display: grid;
+      gap: 12px;
+    }
+
+    .test-item {
+      padding: 14px;
+
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr);
+      align-items: start;
+      gap: 10px;
+
+      border: 2px solid #e0c7ef;
+      border-radius: 12px;
+
+      background: white;
+    }
+
+    .test-icon {
+      width: 28px;
+      height: 28px;
+
+      display: grid;
+      place-items: center;
+
+      border-radius: 50%;
+
+      background: #d9d4d4;
+      color: white;
+
+      font-weight: 900;
+    }
+
+    .test-item.success .test-icon {
+      background: #76a855;
+    }
+
+    .test-item.error .test-icon {
+      background: #bd5163;
+    }
+
+    .test-item.loading .test-icon {
+      background: #e7be44;
+
+      animation: pulse 700ms infinite alternate;
+    }
+
+    .test-item strong {
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    .test-item p {
+      margin: 0;
+
+      color: #765e73;
+
+      font-size: 0.85rem;
+    }
+
+    .actions {
+      margin-top: 22px;
+
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .actions a,
+    .actions button {
+      min-height: 42px;
+      padding: 8px 14px;
+
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+
+      border: 3px solid #8e3867;
+      border-radius: 10px;
+
+      background:
+        linear-gradient(
+          180deg,
+          #ed88ba,
+          #cb4e90
+        );
+
+      color: white;
+
+      font-weight: 900;
+      text-decoration: none;
+
+      box-shadow:
+        inset 0 3px 0 rgba(255, 255, 255, 0.4),
+        0 3px 0 #7c2b59;
+    }
+
+    .details {
+      margin-top: 20px;
+      padding: 14px;
+
+      overflow-wrap: anywhere;
+
+      border: 2px dashed #d2b6c7;
+      border-radius: 10px;
+
+      background: #fffdf0;
+
+      font-family: "Courier New", monospace;
+      font-size: 0.78rem;
+      white-space: pre-wrap;
+    }
+
+    @keyframes pulse {
+      from {
+        opacity: 0.45;
+      }
+
+      to {
+        opacity: 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <main class="test-panel">
+    <h1>Teste da Fundação</h1>
+
+    <p class="subtitle">
+      Esta página verifica a conexão, as tabelas e a sessão
+      administrativa.
+    </p>
+
+    <div class="test-list">
+      <article id="test-config" class="test-item loading">
+        <span class="test-icon">…</span>
+
+        <div>
+          <strong>Configuração do Supabase</strong>
+          <p>Aguardando o arquivo config.js.</p>
+        </div>
+      </article>
+
+      <article id="test-client" class="test-item loading">
+        <span class="test-icon">…</span>
+
+        <div>
+          <strong>Cliente JavaScript</strong>
+          <p>Verificando se o cliente foi criado.</p>
+        </div>
+      </article>
+
+      <article id="test-settings" class="test-item loading">
+        <span class="test-icon">…</span>
+
+        <div>
+          <strong>Leitura pública</strong>
+          <p>Consultando blog_settings.</p>
+        </div>
+      </article>
+
+      <article id="test-categories" class="test-item loading">
+        <span class="test-icon">…</span>
+
+        <div>
+          <strong>Categorias públicas</strong>
+          <p>Consultando blog_categories.</p>
+        </div>
+      </article>
+
+      <article id="test-session" class="test-item loading">
+        <span class="test-icon">…</span>
+
+        <div>
+          <strong>Sessão atual</strong>
+          <p>Verificando se existe usuário conectado.</p>
+        </div>
+      </article>
+
+      <article id="test-admin" class="test-item loading">
+        <span class="test-icon">…</span>
+
+        <div>
+          <strong>Autorização administrativa</strong>
+          <p>Verificando blog_admins.</p>
+        </div>
+      </article>
+    </div>
+
+    <div class="actions">
+      <button id="run-tests-button" type="button">
+        Testar novamente
+      </button>
+
+      <a href="index.html">
+        Abrir site público
+      </a>
+
+      <a href="login.html">
+        Abrir login
+      </a>
+
+      <a href="admin.html">
+        Abrir painel
+      </a>
+    </div>
+
+    <div id="test-details" class="details">
+      Aguardando os testes...
+    </div>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+
+  <script>
+    "use strict";
+
+    const details = document.getElementById("test-details");
+    const runButton = document.getElementById("run-tests-button");
+
+    document.addEventListener("DOMContentLoaded", executarTestes);
+    runButton.addEventListener("click", executarTestes);
+
+    async function executarTestes() {
+      details.textContent = "Iniciando testes...\n";
+
+      reiniciarItem("test-config");
+      reiniciarItem("test-client");
+      reiniciarItem("test-settings");
+      reiniciarItem("test-categories");
+      reiniciarItem("test-session");
+      reiniciarItem("test-admin");
+
+      const configuracaoValida =
+        typeof window.validarConfiguracaoSupabase === "function"
+          ? window.validarConfiguracaoSupabase()
+          : false;
+
+      if (!configuracaoValida) {
+        definirErro(
+          "test-config",
+          "A URL ou a chave pública ainda não foram configuradas."
+        );
+
+        definirErro(
+          "test-client",
+          "O cliente não pode ser criado sem a configuração."
+        );
+
+        interromperTestesRestantes();
+        return;
+      }
+
+      definirSucesso(
+        "test-config",
+        "A URL e a chave pública foram encontradas."
+      );
+
+      const client = window.ferasFloresSupabase;
+
+      if (!client) {
+        definirErro(
+          "test-client",
+          "O cliente não foi criado. Verifique a biblioteca do Supabase."
+        );
+
+        interromperTestesRestantes();
+        return;
+      }
+
+      definirSucesso(
+        "test-client",
+        "O cliente Supabase foi criado corretamente."
+      );
+
+      await testarConfiguracoes(client);
+      await testarCategorias(client);
+
+      const user = await testarSessao(client);
+      await testarAdministrador(client, user);
+    }
+
+    async function testarConfiguracoes(client) {
+      try {
+        const { data, error } = await client
+          .from("blog_settings")
+          .select("setting_key")
+          .eq("is_public", true)
+          .limit(10);
+
+        if (error) {
+          throw error;
+        }
+
+        definirSucesso(
+          "test-settings",
+          `${data.length} configuração(ões) pública(s) encontrada(s).`
+        );
+
+        adicionarDetalhe(
+          "blog_settings: leitura pública funcionando."
+        );
+      } catch (error) {
+        definirErro(
+          "test-settings",
+          formatarErro(error)
+        );
+
+        adicionarDetalhe(
+          `Erro blog_settings: ${formatarErro(error)}`
+        );
+      }
+    }
+
+    async function testarCategorias(client) {
+      try {
+        const { data, error } = await client
+          .from("blog_categories")
+          .select("name, slug")
+          .eq("is_active", true)
+          .order("sort_order");
+
+        if (error) {
+          throw error;
+        }
+
+        definirSucesso(
+          "test-categories",
+          `${data.length} categoria(s) ativa(s) encontrada(s).`
+        );
+
+        adicionarDetalhe(
+          `Categorias: ${
+            data.map((item) => item.name).join(", ") || "nenhuma"
+          }`
+        );
+      } catch (error) {
+        definirErro(
+          "test-categories",
+          formatarErro(error)
+        );
+
+        adicionarDetalhe(
+          `Erro blog_categories: ${formatarErro(error)}`
+        );
+      }
+    }
+
+    async function testarSessao(client) {
+      try {
+        const {
+          data: { user },
+          error
+        } = await client.auth.getUser();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!user) {
+          definirSucesso(
+            "test-session",
+            "Nenhum usuário conectado. Isso é normal no site público."
+          );
+
+          adicionarDetalhe(
+            "Sessão atual: visitante anônimo."
+          );
+
+          return null;
+        }
+
+        definirSucesso(
+          "test-session",
+          `Usuário conectado: ${user.email}`
+        );
+
+        adicionarDetalhe(
+          `Usuário autenticado: ${user.email}`
+        );
+
+        return user;
+      } catch (error) {
+        definirErro(
+          "test-session",
+          formatarErro(error)
+        );
+
+        adicionarDetalhe(
+          `Erro de sessão: ${formatarErro(error)}`
+        );
+
+        return null;
+      }
+    }
+
+    async function testarAdministrador(client, user) {
+      if (!user) {
+        definirSucesso(
+          "test-admin",
+          "Teste administrativo ignorado porque não há usuário conectado."
+        );
+
+        adicionarDetalhe(
+          "Para testar o administrador, entre pelo login e volte para teste.html."
+        );
+
+        return;
+      }
+
+      try {
+        const { data, error } = await client
+          .from("blog_admins")
+          .select("display_name, role, is_active")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (error) {
+          throw error;
+        }
+
+        if (!data) {
+          definirErro(
+            "test-admin",
+            "A conta está autenticada, mas não aparece em blog_admins."
+          );
+
+          adicionarDetalhe(
+            "Administrador não encontrado."
+          );
+
+          return;
+        }
+
+        if (!data.is_active) {
+          definirErro(
+            "test-admin",
+            "O administrador existe, mas está desativado."
+          );
+
+          adicionarDetalhe(
+            `Administrador desativado: ${data.display_name}`
+          );
+
+          return;
+        }
+
+        definirSucesso(
+          "test-admin",
+          `${data.display_name} reconhecido como ${data.role}.`
+        );
+
+        adicionarDetalhe(
+          `Administrador: ${data.display_name} | função: ${data.role}`
+        );
+      } catch (error) {
+        definirErro(
+          "test-admin",
+          formatarErro(error)
+        );
+
+        adicionarDetalhe(
+          `Erro blog_admins: ${formatarErro(error)}`
+        );
+      }
+    }
+
+    function reiniciarItem(id) {
+      const item = document.getElementById(id);
+
+      if (!item) {
+        return;
+      }
+
+      item.className = "test-item loading";
+      item.querySelector(".test-icon").textContent = "…";
+    }
+
+    function definirSucesso(id, message) {
+      const item = document.getElementById(id);
+
+      if (!item) {
+        return;
+      }
+
+      item.className = "test-item success";
+      item.querySelector(".test-icon").textContent = "✓";
+      item.querySelector("p").textContent = message;
+    }
+
+    function definirErro(id, message) {
+      const item = document.getElementById(id);
+
+      if (!item) {
+        return;
+      }
+
+      item.className = "test-item error";
+      item.querySelector(".test-icon").textContent = "×";
+      item.querySelector("p").textContent = message;
+    }
+
+    function interromperTestesRestantes() {
+      [
+        "test-settings",
+        "test-categories",
+        "test-session",
+        "test-admin"
+      ].forEach((id) => {
+        definirErro(
+          id,
+          "Teste interrompido por falta de conexão."
+        );
+      });
+    }
+
+    function adicionarDetalhe(message) {
+      details.textContent += `\n${message}`;
+    }
+
+    function formatarErro(error) {
+      return String(
+        error?.message ||
+        error?.details ||
+        error ||
+        "Erro desconhecido."
+      );
+    }
+  </script>
+</body>
+</html>
