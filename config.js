@@ -29,7 +29,7 @@ function validarConfiguracaoSupabase() {
 
   const chaveNaoConfigurada =
     !SUPABASE_ANON_KEY ||
-    SUPABASE_ANON_KEY.includes("COLE_AQUI");
+    SUPABASE_ANON_KEY.includes("sb_publishable_zbuaw6ryalNRWrp-qHdChg_G54gG9KG");
 
   if (urlNaoConfigurada || chaveNaoConfigurada) {
     console.error(
