@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta name="robots" content="noindex, nofollow">
+
+  <title>Painel — Feras e Flores</title>
+
+  <link rel="stylesheet" href="admin.css">
+</head>
+
+<body class="admin-body" data-page="admin">
+  <div id="authorization-screen" class="authorization-screen">
+    <div class="authorization-box">
+      <span class="authorization-symbol">✦</span>
+
+      <h1>Verificando autorização</h1>
+
+      <p id="authorization-message">
+        Confirmando sua sessão administrativa...
+      </p>
+
+      <span class="large-loader" aria-hidden="true"></span>
+    </div>
+  </div>
+
+  <div id="admin-app" class="admin-app" hidden>
+    <aside id="admin-sidebar" class="admin-sidebar">
+      <div class="sidebar-header">
+        <a class="sidebar-brand" href="admin.html">
+          <span>✦</span>
+
+          <div>
+            <strong>Feras e Flores</strong>
+            <small>Painel administrativo</small>
+          </div>
+        </a>
+
+        <button
+          id="close-sidebar"
+          class="icon-button sidebar-close"
+          type="button"
+          aria-label="Fechar menu"
+        >
+          ×
+        </button>
+      </div>
+
+      <nav class="admin-navigation">
+        <button class="nav-item is-active" type="button">
+          <span class="nav-icon">⌂</span>
+          <span>Visão geral</span>
+        </button>
+
+        <button class="nav-item" type="button">
+          <span class="nav-icon">▤</span>
+          <span>Postagens</span>
+        </button>
+
+        <button class="nav-item" type="button">
+          <span class="nav-icon">♙</span>
+          <span>Personagens</span>
+        </button>
+
+        <button class="nav-item" type="button">
+          <span class="nav-icon">↓</span>
+          <span>Recursos</span>
+        </button>
+
+        <button class="nav-item" type="button">
+          <span class="nav-icon">⌕</span>
+          <span>Pesquisa</span>
+        </button>
+
+        <button class="nav-item" type="button">
+          <span class="nav-icon">◉</span>
+          <span>Eventos secretos</span>
+        </button>
+
+        <button class="nav-item" type="button">
+          <span class="nav-icon">▧</span>
+          <span>Mídias</span>
+        </button>
+
+        <button class="nav-item" type="button">
+          <span class="nav-icon">⚙</span>
+          <span>Configurações</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <a href="index.html" target="_blank" rel="noopener">
+          Abrir site público ↗
+        </a>
+      </div>
+    </aside>
+
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+
+    <section class="admin-main">
+      <header class="admin-topbar">
+        <div class="topbar-left">
+          <button
+            id="open-sidebar"
+            class="icon-button mobile-menu-button"
+            type="button"
+            aria-label="Abrir menu"
+          >
+            ☰
+          </button>
+
+          <div>
+            <p class="topbar-eyebrow">PAINEL ADMINISTRATIVO</p>
+            <h1>Visão geral</h1>
+          </div>
+        </div>
+
+        <div class="admin-user">
+          <div class="admin-user-text">
+            <strong id="admin-display-name">Administrador</strong>
+            <small id="admin-email">Carregando...</small>
+          </div>
+
+          <div id="admin-avatar" class="admin-avatar">
+            A
+          </div>
+
+          <button
+            id="logout-button"
+            class="logout-button"
+            type="button"
+          >
+            Sair
+          </button>
+        </div>
+      </header>
+
+      <main class="admin-content">
+        <section class="welcome-panel">
+          <div>
+            <p class="panel-eyebrow">ARQUIVO CONECTADO</p>
+
+            <h2>
+              Bem-vinda ao painel de Feras e Flores.
+            </h2>
+
+            <p>
+              A fundação do site está funcionando. Nas próximas
+              etapas, os módulos abaixo se transformarão em
+              editores completos.
+            </p>
+          </div>
+
+          <div class="welcome-symbol">✿</div>
+        </section>
+
+        <section class="statistics-grid">
+          <article class="stat-card">
+            <div class="stat-card-top">
+              <span>Postagens</span>
+              <span class="stat-icon">▤</span>
+            </div>
+
+            <strong id="posts-count">—</strong>
+            <small>Total cadastrado</small>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-card-top">
+              <span>Personagens</span>
+              <span class="stat-icon">♙</span>
+            </div>
+
+            <strong id="characters-count">—</strong>
+            <small>Total cadastrado</small>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-card-top">
+              <span>Recursos</span>
+              <span class="stat-icon">↓</span>
+            </div>
+
+            <strong id="resources-count">—</strong>
+            <small>Total cadastrado</small>
+          </article>
+
+          <article class="stat-card">
+            <div class="stat-card-top">
+              <span>Eventos ativos</span>
+              <span class="stat-icon">◉</span>
+            </div>
+
+            <strong id="events-count">—</strong>
+            <small>Segredos em funcionamento</small>
+          </article>
+        </section>
+
+        <section class="admin-section">
+          <div class="admin-section-heading">
+            <div>
+              <p class="panel-eyebrow">ESTRUTURA INICIAL</p>
+              <h2>Módulos do arquivo</h2>
+            </div>
+
+            <span class="status-badge">Fundação pronta</span>
+          </div>
+
+          <div class="modules-grid">
+            <article class="module-card">
+              <span class="module-icon">▤</span>
+
+              <div>
+                <h3>Postagens</h3>
+                <p>
+                  Atualizações, anúncios, bastidores e conteúdos
+                  editoriais.
+                </p>
+              </div>
+
+              <button type="button" disabled>
+                Em breve
+              </button>
+            </article>
+
+            <article class="module-card">
+              <span class="module-icon">♙</span>
+
+              <div>
+                <h3>Personagens</h3>
+                <p>
+                  Páginas, aliases, imagens, descrições e registros
+                  secretos.
+                </p>
+              </div>
+
+              <button type="button" disabled>
+                Em breve
+              </button>
+            </article>
+
+            <article class="module-card">
+              <span class="module-icon">⌕</span>
+
+              <div>
+                <h3>Pesquisa</h3>
+                <p>
+                  Termos, códigos, respostas ocultas e caminhos do
+                  enigma.
+                </p>
+              </div>
+
+              <button type="button" disabled>
+                Em breve
+              </button>
+            </article>
+
+            <article class="module-card">
+              <span class="module-icon">◉</span>
+
+              <div>
+                <h3>Eventos secretos</h3>
+                <p>
+                  Glitches, sons, atrasos, apagões e sequências
+                  assustadoras.
+                </p>
+              </div>
+
+              <button type="button" disabled>
+                Em breve
+              </button>
+            </article>
+          </div>
+        </section>
+
+        <section class="system-panel">
+          <div>
+            <span class="system-light"></span>
+
+            <div>
+              <strong>Supabase conectado</strong>
+              <small>
+                Sua sessão foi reconhecida e a autorização
+                administrativa foi confirmada.
+              </small>
+            </div>
+          </div>
+
+          <span id="admin-role" class="role-badge">admin</span>
+        </section>
+      </main>
+    </section>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
