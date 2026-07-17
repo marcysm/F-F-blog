@@ -10,7 +10,7 @@
 
   <meta
     name="description"
-    content="Site oficial de Feras e Flores."
+    content="Portal oficial de Feras e Flores."
   >
 
   <title>Feras e Flores</title>
@@ -19,207 +19,675 @@
 </head>
 
 <body data-page="public">
-  <div class="site-background" aria-hidden="true">
-    <span class="background-flower flower-one">✦</span>
-    <span class="background-flower flower-two">✿</span>
-    <span class="background-flower flower-three">✦</span>
+  <!-- =====================================================
+       FUNDO DECORATIVO
+       ===================================================== -->
+
+  <div class="page-background" aria-hidden="true">
+    <span class="floating-shape shape-one">✿</span>
+    <span class="floating-shape shape-two">✦</span>
+    <span class="floating-shape shape-three">☾</span>
+    <span class="floating-shape shape-four">✿</span>
   </div>
 
-  <header class="site-header">
-    <a class="brand" href="index.html" aria-label="Feras e Flores">
-      <span class="brand-symbol">✦</span>
+  <!-- =====================================================
+       CABEÇALHO PRINCIPAL
+       ===================================================== -->
 
-      <span class="brand-text">
-        <strong id="site-name">Feras e Flores</strong>
-        <small>Arquivo oficial</small>
-      </span>
-    </a>
+  <header class="game-header">
+    <div class="header-top">
+      <div class="header-cloud header-cloud-left"></div>
+      <div class="header-cloud header-cloud-right"></div>
 
-    <button
-      id="menu-button"
-      class="menu-button"
-      type="button"
-      aria-label="Abrir menu"
-      aria-expanded="false"
-      aria-controls="main-navigation"
-    >
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
+      <a class="game-logo" href="index.html">
+        <img
+          src="assets/flor-logo.png"
+          alt=""
+          class="game-logo-image"
+        >
 
-    <nav id="main-navigation" class="main-navigation">
-      <a href="#inicio">Início</a>
-      <a href="#atualizacoes">Atualizações</a>
-      <a href="#recursos">Recursos</a>
-      <a href="#comunidade">Comunidade</a>
-      <a href="#sobre">Sobre</a>
+        <span class="game-logo-text">
+          <strong id="site-name">Feras &amp; Flores</strong>
+          <small>Portal oficial do jardim</small>
+        </span>
+      </a>
+
+      <button
+        id="mobile-menu-button"
+        class="mobile-menu-button"
+        type="button"
+        aria-label="Abrir menu"
+        aria-expanded="false"
+      >
+        ☰
+      </button>
+
+      <nav id="main-menu" class="main-menu">
+        <a class="main-menu-link is-active" href="#inicio">
+          <span>Início</span>
+        </a>
+
+        <a class="main-menu-link" href="#novidades">
+          <span>Novidades</span>
+        </a>
+
+        <a class="main-menu-link" href="#personagens">
+          <span>Personagens</span>
+        </a>
+
+        <a class="main-menu-link" href="#recursos">
+          <span>Recursos</span>
+        </a>
+
+        <a class="main-menu-link" href="#comunidade">
+          <span>Comunidade</span>
+        </a>
+
+        <a class="main-menu-link" href="#ajuda">
+          <span>Ajuda</span>
+        </a>
+      </nav>
+
+      <a class="play-button" href="#pesquisa">
+        <span class="play-button-small">ENTRE NO</span>
+        <strong>JARDIM!</strong>
+      </a>
+    </div>
+
+    <nav class="secondary-menu">
+      <a href="#novidades">O que há de novo?</a>
+      <a href="#personagens">Galeria</a>
+      <a href="#recursos">Downloads</a>
+      <a href="#comunidade">Criações dos jogadores</a>
+      <a href="#ajuda">Perguntas frequentes</a>
     </nav>
   </header>
 
-  <main>
-    <section id="inicio" class="hero-section">
-      <div class="hero-content">
-        <p class="eyebrow">BEM-VINDO AO ARQUIVO</p>
+  <!-- =====================================================
+       MOLDURA CENTRAL DO SITE
+       ===================================================== -->
 
-        <h1>
-          Toda flor guarda uma história.
-          <span>Algumas deveriam permanecer enterradas.</span>
-        </h1>
+  <div class="site-shell">
+    <main class="site-content">
+      <!-- =================================================
+           TÍTULO DA PÁGINA
+           ================================================= -->
 
-        <p id="site-subtitle" class="hero-description">
-          Notícias, personagens, recursos e registros do mundo de
-          Feras e Flores.
-        </p>
+      <section id="inicio" class="page-title-bar">
+        <div>
+          <span class="page-title-icon">✿</span>
 
-        <form id="central-search-form" class="central-search">
-          <label for="central-search-input">
-            Pesquisar no arquivo
-          </label>
-
-          <div class="search-field">
-            <input
-              id="central-search-input"
-              type="search"
-              autocomplete="off"
-              spellcheck="false"
-              placeholder="Pesquise personagens, lugares e histórias..."
-            >
-
-            <button type="submit">
-              <span>Pesquisar</span>
-              <span aria-hidden="true">⌕</span>
-            </button>
+          <div>
+            <p>PORTAL OFICIAL</p>
+            <h1>Bem-vindo ao Jardim</h1>
           </div>
-
-          <p class="search-hint">
-            Nomes, lugares, acontecimentos, arquivos e outras coisas.
-          </p>
-        </form>
-
-        <div
-          id="search-message"
-          class="search-message"
-          role="status"
-          aria-live="polite"
-          hidden
-        ></div>
-      </div>
-
-      <div class="hero-decoration" aria-hidden="true">
-        <div class="flower-emblem">
-          <span class="petal petal-one"></span>
-          <span class="petal petal-two"></span>
-          <span class="petal petal-three"></span>
-          <span class="petal petal-four"></span>
-          <span class="flower-center"></span>
         </div>
-      </div>
-    </section>
 
-    <section id="atualizacoes" class="content-section">
-      <div class="section-heading">
+        <div class="garden-status">
+          <span class="status-dot"></span>
+
+          <div>
+            <small>Status do jardim</small>
+            <strong>Florescendo</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- =================================================
+           DUAS COLUNAS
+           ================================================= -->
+
+      <div class="portal-columns">
+        <!-- ===============================================
+             COLUNA ESQUERDA
+             =============================================== -->
+
+        <div class="portal-main-column">
+          <!-- DESTAQUE PRINCIPAL -->
+
+          <section class="portal-box welcome-box">
+            <div class="box-title yellow-title">
+              <h2>Confira as novidades do Jardim!</h2>
+
+              <span class="box-title-star">NEW!</span>
+            </div>
+
+            <div class="welcome-box-content">
+              <div class="welcome-copy">
+                <p class="welcome-date">
+                  Atualização do Jardim
+                </p>
+
+                <h3>Olá, floristas e feras!</h3>
+
+                <p>
+                  Este é o portal oficial de Feras e Flores.
+                  Aqui você encontrará notícias, personagens,
+                  recursos, arquivos e descobertas feitas pela
+                  comunidade.
+                </p>
+
+                <p>
+                  Algumas informações podem estar escondidas em
+                  lugares menos óbvios. Explore o portal e use a
+                  pesquisa sempre que encontrar um nome, símbolo
+                  ou palavra estranha.
+                </p>
+
+                <a class="small-arrow-button" href="#novidades">
+                  <span>➜</span>
+                  Ler as novidades
+                </a>
+              </div>
+
+              <div class="welcome-art">
+                <img
+                  src="assets/flor-logo.png"
+                  alt="Flores mágicas rosas"
+                >
+              </div>
+            </div>
+          </section>
+
+          <!-- NOVIDADES -->
+
+          <section id="novidades" class="portal-box">
+            <div class="box-title pink-title">
+              <h2>Novidades do Jardim</h2>
+
+              <button
+                id="show-all-posts-button"
+                class="mini-link-button"
+                type="button"
+              >
+                Ver todas
+              </button>
+            </div>
+
+            <div id="latest-posts" class="news-list">
+              <article class="news-item news-placeholder">
+                <div class="news-thumbnail">
+                  <span>✿</span>
+                </div>
+
+                <div class="news-copy">
+                  <span class="news-category">
+                    Atualizações
+                  </span>
+
+                  <h3>Nenhuma novidade publicada ainda</h3>
+
+                  <p>
+                    As postagens criadas no painel administrativo
+                    aparecerão automaticamente neste espaço.
+                  </p>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <!-- PERSONAGENS -->
+
+          <section id="personagens" class="portal-box">
+            <div class="box-title purple-title">
+              <h2>Habitantes do Jardim</h2>
+
+              <span class="box-subtitle">
+                Quem você já encontrou?
+              </span>
+            </div>
+
+            <div class="characters-intro">
+              <p>
+                Conheça algumas das pessoas, criaturas e figuras
+                que fazem parte do mundo de Feras e Flores.
+              </p>
+
+              <p class="characters-tip">
+                Dica: experimente pesquisar o nome de alguém.
+              </p>
+            </div>
+
+            <div class="character-gallery">
+              <button
+                class="character-gallery-card"
+                type="button"
+                data-character-search="Fergus"
+              >
+                <div class="character-art-frame">
+                  <img
+                    src="assets/personagens-01.png"
+                    alt="Grupo de personagens de Feras e Flores"
+                  >
+                </div>
+
+                <span>Primeiros registros</span>
+              </button>
+
+              <button
+                class="character-gallery-card"
+                type="button"
+                data-character-search="Outros habitantes"
+              >
+                <div class="character-art-frame">
+                  <img
+                    src="assets/personagens-02.png"
+                    alt="Outro grupo de personagens de Feras e Flores"
+                  >
+                </div>
+
+                <span>Outros habitantes</span>
+              </button>
+
+              <button
+                class="character-gallery-card"
+                type="button"
+                data-character-search="As feras"
+              >
+                <div class="character-art-frame">
+                  <img
+                    src="assets/personagens-03.png"
+                    alt="Feras e figuras misteriosas"
+                  >
+                </div>
+
+                <span>Figuras misteriosas</span>
+              </button>
+            </div>
+
+            <a class="wide-portal-button" href="#pesquisa">
+              <span>✦</span>
+              Pesquisar um personagem
+              <span>➜</span>
+            </a>
+          </section>
+
+          <!-- COMUNIDADE -->
+
+          <section id="comunidade" class="portal-box">
+            <div class="box-title green-title">
+              <h2>Comunidade em Destaque</h2>
+            </div>
+
+            <div class="community-grid">
+              <article class="community-feature">
+                <div class="community-feature-heading">
+                  <span class="community-icon">★</span>
+
+                  <div>
+                    <h3>Criações da comunidade</h3>
+                    <p>Fanarts, teorias e descobertas</p>
+                  </div>
+                </div>
+
+                <div class="fanart-preview-grid">
+                  <div class="fanart-preview">
+                    <img
+                      src="assets/personagens-01.png"
+                      alt="Arte de personagens"
+                    >
+                  </div>
+
+                  <div class="fanart-preview">
+                    <img
+                      src="assets/personagens-02.png"
+                      alt="Arte de personagens"
+                    >
+                  </div>
+
+                  <div class="fanart-preview">
+                    <img
+                      src="assets/criaturas.png"
+                      alt="Arte de criaturas"
+                    >
+                  </div>
+                </div>
+
+                <button class="small-arrow-button" type="button">
+                  <span>➜</span>
+                  Ver galeria
+                </button>
+              </article>
+
+              <article class="community-poll">
+                <div class="poll-heading">
+                  <span>?</span>
+
+                  <div>
+                    <h3>Enquete do Jardim</h3>
+                    <p>Qual destes caminhos você escolheria?</p>
+                  </div>
+                </div>
+
+                <form id="garden-poll-form" class="poll-options">
+                  <label>
+                    <input
+                      type="radio"
+                      name="garden-poll"
+                      value="flores"
+                    >
+                    <span>O caminho das flores</span>
+                  </label>
+
+                  <label>
+                    <input
+                      type="radio"
+                      name="garden-poll"
+                      value="feras"
+                    >
+                    <span>O caminho das feras</span>
+                  </label>
+
+                  <label>
+                    <input
+                      type="radio"
+                      name="garden-poll"
+                      value="lua"
+                    >
+                    <span>O caminho da lua</span>
+                  </label>
+
+                  <label>
+                    <input
+                      type="radio"
+                      name="garden-poll"
+                      value="nenhum"
+                    >
+                    <span>Nenhum deles</span>
+                  </label>
+
+                  <button type="submit">
+                    Votar!
+                  </button>
+                </form>
+
+                <p
+                  id="poll-message"
+                  class="poll-message"
+                  hidden
+                ></p>
+              </article>
+            </div>
+          </section>
+        </div>
+
+        <!-- ===============================================
+             COLUNA DIREITA
+             =============================================== -->
+
+        <aside class="portal-side-column">
+          <!-- PESQUISA PRINCIPAL -->
+
+          <section
+            id="pesquisa"
+            class="side-box search-side-box"
+          >
+            <div class="side-box-title search-box-title">
+              <span>⌕</span>
+              <h2>Pesquisar no Jardim</h2>
+            </div>
+
+            <form
+              id="central-search-form"
+              class="garden-search-form"
+            >
+              <label for="central-search-input">
+                Digite um nome, palavra ou código:
+              </label>
+
+              <input
+                id="central-search-input"
+                type="search"
+                autocomplete="off"
+                spellcheck="false"
+                placeholder="O que você procura?"
+              >
+
+              <button
+                id="garden-search-button"
+                type="submit"
+              >
+                <span>Pesquisar</span>
+                <strong>IR!</strong>
+              </button>
+            </form>
+
+            <div
+              id="search-message"
+              class="search-result-box"
+              role="status"
+              aria-live="polite"
+              hidden
+            ></div>
+
+            <p class="search-warning">
+              Nem tudo o que existe no jardim aparece nos menus.
+            </p>
+          </section>
+
+          <!-- RELÓGIO -->
+
+          <section class="side-box garden-clock-box">
+            <div class="side-box-title blue-title">
+              <span>☾</span>
+              <h2>Horário do Jardim</h2>
+            </div>
+
+            <div class="garden-clock">
+              <strong id="garden-clock-time">00:00:00</strong>
+              <span id="garden-clock-period">Carregando...</span>
+            </div>
+
+            <div class="garden-weather">
+              <span class="weather-icon">☁</span>
+
+              <div>
+                <small>Clima atual</small>
+                <strong id="garden-weather-text">
+                  Névoa rosada
+                </strong>
+              </div>
+            </div>
+          </section>
+
+          <!-- PERSONAGEM EM DESTAQUE -->
+
+          <section class="side-box featured-character-box">
+            <div class="side-box-title purple-title">
+              <span>★</span>
+              <h2>Personagens em Destaque</h2>
+            </div>
+
+            <div class="featured-character-image">
+              <img
+                src="assets/personagens-04.png"
+                alt="Personagens de Feras e Flores"
+              >
+            </div>
+
+            <p>
+              Há muitas histórias escondidas atrás de nomes que
+              parecem comuns.
+            </p>
+
+            <button
+              class="side-action-button"
+              type="button"
+              data-character-search="Kraken"
+            >
+              Conhecer alguém
+              <span>➜</span>
+            </button>
+          </section>
+
+          <!-- RECURSOS -->
+
+          <section id="recursos" class="side-box resources-box">
+            <div class="side-box-title pink-title">
+              <span>✦</span>
+              <h2>Recursos Divertidos</h2>
+            </div>
+
+            <div class="resources-art">
+              <img
+                src="assets/pocoes.png"
+                alt="Frascos e poções mágicas"
+              >
+            </div>
+
+            <div class="resource-links">
+              <button type="button">
+                <span class="resource-icon">☾</span>
+
+                <span>
+                  <strong>Papéis de parede</strong>
+                  <small>Decore sua tela</small>
+                </span>
+
+                <b>➜</b>
+              </button>
+
+              <button type="button">
+                <span class="resource-icon">♫</span>
+
+                <span>
+                  <strong>Sons do Jardim</strong>
+                  <small>Ouça com atenção</small>
+                </span>
+
+                <b>➜</b>
+              </button>
+
+              <button type="button">
+                <span class="resource-icon">✎</span>
+
+                <span>
+                  <strong>Arquivos para baixar</strong>
+                  <small>Jogos e materiais</small>
+                </span>
+
+                <b>➜</b>
+              </button>
+            </div>
+          </section>
+
+          <!-- CRIATURA DO DIA -->
+
+          <section class="side-box creature-box">
+            <div class="side-box-title orange-title">
+              <span>!</span>
+              <h2>Criatura do Dia</h2>
+            </div>
+
+            <div class="creature-image">
+              <img
+                src="assets/criaturas.png"
+                alt="Criaturas do mundo de Feras e Flores"
+              >
+            </div>
+
+            <p>
+              Algumas criaturas gostam de ser observadas.
+              Outras percebem quando você está olhando.
+            </p>
+          </section>
+
+          <!-- AJUDA -->
+
+          <section id="ajuda" class="side-box help-box">
+            <div class="side-box-title green-title">
+              <span>?</span>
+              <h2>Precisa de Ajuda?</h2>
+            </div>
+
+            <ul>
+              <li>
+                <button type="button">
+                  Como usar a pesquisa?
+                </button>
+              </li>
+
+              <li>
+                <button type="button">
+                  Onde encontro os recursos?
+                </button>
+              </li>
+
+              <li>
+                <button type="button">
+                  O site está estranho.
+                </button>
+              </li>
+            </ul>
+          </section>
+        </aside>
+      </div>
+    </main>
+  </div>
+
+  <!-- =====================================================
+       RODAPÉ
+       ===================================================== -->
+
+  <footer class="game-footer">
+    <div class="footer-top-wave"></div>
+
+    <div class="footer-content">
+      <div class="footer-brand">
+        <img src="assets/flor-logo.png" alt="">
+
         <div>
-          <p class="eyebrow">REGISTROS RECENTES</p>
-          <h2>Atualizações</h2>
-        </div>
-
-        <button class="text-button" type="button">
-          Ver todas
-        </button>
-      </div>
-
-      <div id="latest-posts" class="cards-grid">
-        <article class="content-card empty-card">
-          <span class="card-icon">✦</span>
-          <h3>Nenhuma atualização publicada</h3>
-          <p>
-            As primeiras postagens aparecerão aqui quando forem
-            publicadas pelo painel.
-          </p>
-        </article>
-      </div>
-    </section>
-
-    <section id="recursos" class="content-section muted-section">
-      <div class="section-heading">
-        <div>
-          <p class="eyebrow">MATERIAIS DO PROJETO</p>
-          <h2>Recursos</h2>
+          <strong>Feras &amp; Flores</strong>
+          <small>Portal oficial do Jardim</small>
         </div>
       </div>
 
-      <div class="feature-grid">
-        <article class="feature-card">
-          <span class="feature-number">01</span>
-          <h3>Arquivos</h3>
-          <p>
-            Documentos, materiais de apoio e conteúdos disponíveis
-            para os jogadores.
-          </p>
-        </article>
+      <nav class="footer-links">
+        <a href="#inicio">Início</a>
+        <a href="#novidades">Novidades</a>
+        <a href="#recursos">Recursos</a>
+        <a href="#ajuda">Ajuda</a>
+        <a href="login.html">Área administrativa</a>
+      </nav>
 
-        <article class="feature-card">
-          <span class="feature-number">02</span>
-          <h3>Personagens</h3>
-          <p>
-            Registros conhecidos sobre as pessoas que atravessaram
-            esta história.
-          </p>
-        </article>
+      <div class="footer-warning">
+        <span>12+</span>
 
-        <article class="feature-card">
-          <span class="feature-number">03</span>
-          <h3>Comunidade</h3>
-          <p>
-            Descobertas, interpretações e criações compartilhadas
-            pela comunidade.
-          </p>
-        </article>
+        <p>
+          Algumas flores possuem espinhos.<br>
+          Alguns espinhos possuem olhos.
+        </p>
       </div>
-    </section>
-
-    <section id="comunidade" class="content-section">
-      <div class="community-panel">
-        <div>
-          <p class="eyebrow">COMUNIDADE</p>
-          <h2>Uma história construída por descobertas</h2>
-          <p>
-            Feras e Flores também existe nas teorias, interpretações
-            e pistas encontradas por quem acompanha o projeto.
-          </p>
-        </div>
-
-        <div class="community-symbol" aria-hidden="true">
-          ✿
-        </div>
-      </div>
-    </section>
-
-    <section id="sobre" class="content-section about-section">
-      <p class="eyebrow">SOBRE O PROJETO</p>
-
-      <h2>
-        Há mundos que são encontrados.<br>
-        E há mundos que encontram você.
-      </h2>
-
-      <p>
-        Este é o arquivo público de Feras e Flores. Aqui serão
-        reunidas atualizações, informações de personagens, recursos
-        e registros relacionados ao projeto.
-      </p>
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div>
-      <strong>Feras e Flores</strong>
-      <p>Nem toda história deveria ser encontrada.</p>
     </div>
 
-    <a href="login.html">Área administrativa</a>
+    <p class="footer-copy">
+      Feras e Flores — Arquivo do Jardim.
+      Nem todos os registros são confiáveis.
+    </p>
   </footer>
+
+  <!-- =====================================================
+       CAMADAS PARA EVENTOS FUTUROS
+       ===================================================== -->
+
+  <div
+    id="site-effect-layer"
+    class="site-effect-layer"
+    aria-hidden="true"
+  ></div>
+
+  <div
+    id="site-blackout"
+    class="site-blackout"
+    aria-hidden="true"
+  ></div>
+
+  <div
+    id="site-event-message"
+    class="site-event-message"
+    role="alert"
+    hidden
+  ></div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="config.js"></script>
