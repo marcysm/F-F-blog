@@ -5,14 +5,6 @@
    CONFIGURAÇÃO DO SUPABASE
    ========================================================== */
 
-/*
-  IMPORTANTE:
-
-  1. Coloque aqui a URL do seu projeto Supabase.
-  2. Coloque aqui a chave pública "anon" ou "publishable".
-  3. Nunca coloque a service_role ou uma secret key neste arquivo.
-*/
-
 const SUPABASE_URL = "https://gxwaqoaskyatkxcsmzne.supabase.co";
 
 const SUPABASE_ANON_KEY = "sb_publishable_zbuaw6ryalNRWrp-qHdChg_G54gG9KG";
@@ -65,10 +57,6 @@ if (
     }
   );
 }
-
-/*
-  Deixamos o cliente disponível para os demais arquivos.
-*/
 
 window.ferasFloresSupabase = ferasFloresSupabase;
 window.validarConfiguracaoSupabase = validarConfiguracaoSupabase;
