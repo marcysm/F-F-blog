@@ -1,364 +1,222 @@
 "use strict";
 
 /* ==========================================================
-   FERAS E FLORES
-   PORTAL PÚBLICO
+   FERAS E FLORES — SITE PÚBLICO
    ========================================================== */
 
 const publicState = {
   client: window.ferasFloresSupabase,
-
+  soundEnabled: true,
+  audio: null,
   searchSettings: {
-    placeholder: "O que você procura?",
-    empty_message: "Você precisa escrever alguma coisa.",
-    not_found_message: "Nenhum registro foi encontrado.",
+    empty_message: "Digite alguma coisa para consultar o arquivo.",
+    not_found_message: "Nenhum registro reconheceu essa consulta.",
     minimum_characters: 2
-  },
-
-  clockInterval: null
+  }
 };
 
-/* ==========================================================
-   INICIALIZAÇÃO
-   ========================================================== */
+document.addEventListener("DOMContentLoaded", initializePublicSite);
 
-document.addEventListener("DOMContentLoaded", iniciarPortal);
-
-async function iniciarPortal() {
-  configurarMenuMobile();
-  configurarPesquisa();
-  configurarAtalhosDePersonagens();
-  configurarEnquete();
-  configurarBotoesTemporarios();
-  iniciarRelogioDoJardim();
+async function initializePublicSite() {
+  configureClock();
+  configureSoundToggle();
+  configureSearch();
+  configureModal();
 
   if (!publicState.client) {
-    mostrarMensagemPesquisa(
-      "O portal está aberto, mas a conexão com o arquivo ainda não foi configurada.",
+    showSearchMessage(
+      "A conexão com o arquivo não foi iniciada. Verifique config.js.",
       "error"
     );
-
-    console.error(
-      "Supabase indisponível. Confira a URL e a chave pública no config.js."
-    );
-
     return;
   }
 
   await Promise.allSettled([
-    carregarConfiguracoesPublicas(),
-    carregarPostagensRecentes()
+    loadPublicSettings(),
+    loadRecentPosts()
   ]);
 }
 
-/* ==========================================================
-   MENU MOBILE
-   ========================================================== */
+function configureClock() {
+  updateClock();
+  window.setInterval(updateClock, 1000);
+}
 
-function configurarMenuMobile() {
-  const button = document.getElementById(
-    "mobile-menu-button"
-  );
+function updateClock() {
+  const element = document.getElementById("archive-clock");
 
-  const menu = document.getElementById("main-menu");
+  if (!element) {
+    return;
+  }
 
-  if (!button || !menu) {
+  element.textContent = new Intl.DateTimeFormat("pt-BR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit"
+  }).format(new Date());
+}
+
+function configureSoundToggle() {
+  const button = document.getElementById("sound-toggle");
+
+  if (!button) {
     return;
   }
 
   button.addEventListener("click", () => {
-    const aberto = menu.classList.toggle("is-open");
+    publicState.soundEnabled = !publicState.soundEnabled;
 
-    button.setAttribute(
-      "aria-expanded",
-      String(aberto)
-    );
+    button.textContent = publicState.soundEnabled
+      ? "SOM: LIGADO"
+      : "SOM: DESLIGADO";
 
-    button.textContent = aberto ? "×" : "☰";
-  });
-
-  menu.addEventListener("click", (event) => {
-    if (!event.target.closest("a")) {
-      return;
-    }
-
-    menu.classList.remove("is-open");
-
-    button.setAttribute(
-      "aria-expanded",
-      "false"
-    );
-
-    button.textContent = "☰";
-  });
-
-  window.addEventListener("resize", () => {
-    if (window.innerWidth > 900) {
-      menu.classList.remove("is-open");
-
-      button.setAttribute(
-        "aria-expanded",
-        "false"
-      );
-
-      button.textContent = "☰";
+    if (!publicState.soundEnabled && publicState.audio) {
+      publicState.audio.pause();
+      publicState.audio = null;
     }
   });
 }
 
-/* ==========================================================
-   CONFIGURAÇÕES PÚBLICAS
-   ========================================================== */
-
-async function carregarConfiguracoesPublicas() {
+async function loadPublicSettings() {
   try {
     const { data, error } = await publicState.client
       .from("blog_settings")
       .select("setting_key, setting_value")
       .eq("is_public", true)
-      .in("setting_key", [
-        "site_identity",
-        "search"
-      ]);
+      .eq("setting_key", "search")
+      .maybeSingle();
 
     if (error) {
       throw error;
     }
 
-    const settings = Object.fromEntries(
-      (data || []).map((item) => [
-        item.setting_key,
-        item.setting_value
-      ])
-    );
+    if (data?.setting_value) {
+      publicState.searchSettings = {
+        ...publicState.searchSettings,
+        ...data.setting_value
+      };
 
-    aplicarIdentidade(settings.site_identity);
-    aplicarConfiguracoesPesquisa(settings.search);
+      const input = document.getElementById("central-search-input");
+
+      if (input && data.setting_value.placeholder) {
+        input.placeholder = data.setting_value.placeholder;
+      }
+    }
   } catch (error) {
-    console.error(
-      "Não foi possível carregar as configurações públicas:",
-      error
-    );
+    console.warn("Configurações públicas não carregadas:", error);
   }
 }
 
-function aplicarIdentidade(identity) {
-  if (!identity || typeof identity !== "object") {
-    return;
-  }
-
-  const nameElement =
-    document.getElementById("site-name");
-
-  if (nameElement && identity.name) {
-    nameElement.textContent = identity.name;
-  }
-
-  if (identity.name) {
-    document.title = identity.name;
-  }
-}
-
-function aplicarConfiguracoesPesquisa(settings) {
-  if (!settings || typeof settings !== "object") {
-    return;
-  }
-
-  publicState.searchSettings = {
-    ...publicState.searchSettings,
-    ...settings
-  };
-
-  const input =
-    document.getElementById("central-search-input");
-
-  if (input && settings.placeholder) {
-    input.placeholder = settings.placeholder;
-  }
-}
-
-/* ==========================================================
-   POSTAGENS
-   ========================================================== */
-
-async function carregarPostagensRecentes() {
-  const container =
-    document.getElementById("latest-posts");
-
-  if (!container) {
-    return;
-  }
+async function loadRecentPosts() {
+  const container = document.getElementById("latest-posts");
+  const countElement = document.getElementById("archive-count-number");
 
   try {
-    const { data, error } = await publicState.client
+    const { data, error, count } = await publicState.client
       .from("blog_posts")
-      .select(`
-        id,
-        title,
-        slug,
-        excerpt,
-        cover_image_url,
-        author_name,
-        published_at,
-        blog_categories (
-          name,
-          slug
-        )
-      `)
+      .select(
+        "id, title, excerpt, published_at, author_name",
+        { count: "exact" }
+      )
       .eq("status", "published")
-      .order("published_at", {
-        ascending: false
-      })
-      .limit(4);
+      .order("published_at", { ascending: false })
+      .limit(6);
 
     if (error) {
       throw error;
     }
 
-    if (!data || data.length === 0) {
+    if (countElement) {
+      countElement.textContent = String(count ?? data?.length ?? 0);
+    }
+
+    if (!container || !data?.length) {
       return;
     }
 
-    container.innerHTML = data
-      .map(criarHTMLPostagem)
-      .join("");
+    container.innerHTML = data.map((post, index) => {
+      const number = String(index + 1).padStart(3, "0");
+
+      return `
+        <article class="record-card">
+          <span class="record-number">${number}</span>
+
+          <div>
+            <h3>${escapeHTML(post.title || "SEM TÍTULO")}</h3>
+
+            <p>
+              ${escapeHTML(
+                post.excerpt ||
+                "Um novo registro foi adicionado ao arquivo."
+              )}
+            </p>
+
+            <small>
+              ${formatDate(post.published_at)}
+              ${post.author_name
+                ? ` // ${escapeHTML(post.author_name)}`
+                : ""}
+            </small>
+          </div>
+        </article>
+      `;
+    }).join("");
   } catch (error) {
-    console.error(
-      "Não foi possível carregar as postagens:",
-      error
-    );
+    console.error("Falha ao carregar registros:", error);
+
+    if (countElement) {
+      countElement.textContent = "!";
+    }
   }
 }
 
-function criarHTMLPostagem(post) {
-  const title = escaparHTML(
-    post.title || "Sem título"
-  );
-
-  const excerpt = escaparHTML(
-    post.excerpt ||
-    "Uma nova atualização foi encontrada no Jardim."
-  );
-
-  const category = escaparHTML(
-    post.blog_categories?.name ||
-    "Atualização"
-  );
-
-  const author = escaparHTML(
-    post.author_name ||
-    "Equipe Feras e Flores"
-  );
-
-  const date = formatarData(post.published_at);
-
-  const image = post.cover_image_url
-    ? `
-      <img
-        src="${escaparAtributo(post.cover_image_url)}"
-        alt=""
-        loading="lazy"
-      >
-    `
-    : `<span>✿</span>`;
-
-  return `
-    <article class="news-item">
-      <div class="news-thumbnail">
-        ${image}
-      </div>
-
-      <div class="news-copy">
-        <span class="news-category">
-          ${category}
-        </span>
-
-        <h3>${title}</h3>
-
-        <p>${excerpt}</p>
-
-        <div class="news-meta">
-          <span>${date}</span>
-          <span>por ${author}</span>
-        </div>
-      </div>
-    </article>
-  `;
-}
-
-/* ==========================================================
-   PESQUISA
-   ========================================================== */
-
-function configurarPesquisa() {
-  const form =
-    document.getElementById("central-search-form");
+function configureSearch() {
+  const form = document.getElementById("central-search-form");
 
   if (!form) {
     return;
   }
 
-  form.addEventListener(
-    "submit",
-    executarPesquisa
-  );
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const input = document.getElementById("central-search-input");
+    const term = input?.value?.trim() || "";
+
+    await executeSearch(term);
+  });
 }
 
-async function executarPesquisa(event) {
-  event.preventDefault();
-
-  const input =
-    document.getElementById("central-search-input");
-
-  const originalTerm =
-    input?.value?.trim() || "";
-
-  await pesquisarTermo(originalTerm);
-}
-
-async function pesquisarTermo(originalTerm) {
-  const input =
-    document.getElementById("central-search-input");
-
+async function executeSearch(originalTerm) {
   const minimum = Number(
     publicState.searchSettings.minimum_characters || 2
   );
 
   if (!originalTerm) {
-    mostrarMensagemPesquisa(
+    showSearchMessage(
       publicState.searchSettings.empty_message,
       "error"
     );
-
-    input?.focus();
     return;
   }
 
   if (originalTerm.length < minimum) {
-    mostrarMensagemPesquisa(
+    showSearchMessage(
       `Digite pelo menos ${minimum} caracteres.`,
       "error"
     );
-
     return;
   }
 
   if (!publicState.client) {
-    mostrarMensagemPesquisa(
-      "O arquivo do Jardim ainda não está conectado.",
+    showSearchMessage(
+      "O arquivo está desconectado.",
       "error"
     );
-
     return;
   }
 
-  const normalizedTerm =
-    normalizarTexto(originalTerm);
-
-  mostrarMensagemPesquisa(
-    "Procurando nos registros...",
-    "loading"
-  );
+  showSearchMessage("CONSULTANDO O ARQUIVO...", "loading");
 
   try {
     const { data, error } = await publicState.client
@@ -369,71 +227,56 @@ async function pesquisarTermo(originalTerm) {
         normalized_term,
         aliases,
         entry_type,
+        post_id,
+        character_id,
+        resource_id,
+        secret_event_id,
         destination_url,
         response_title,
         response_message,
         response_image_url,
         response_audio_url,
         match_mode,
-        priority,
-        secret_event_id,
-        character_id,
-        post_id,
-        resource_id
+        priority
       `)
       .eq("is_active", true)
-      .order("priority", {
-        ascending: false
-      });
+      .order("priority", { ascending: false });
 
     if (error) {
       throw error;
     }
 
-    const result = encontrarResultado(
-      data || [],
-      normalizedTerm
-    );
+    const normalized = normalizeText(originalTerm);
+    const result = findResult(data || [], normalized);
 
     if (!result) {
-      mostrarMensagemPesquisa(
+      showSearchMessage(
         publicState.searchSettings.not_found_message,
         "default"
       );
-
       return;
     }
 
-    await processarResultado(result);
+    await processSearchResult(result);
   } catch (error) {
-    console.error(
-      "Erro durante a pesquisa:",
-      error
-    );
+    console.error("Erro de pesquisa:", error);
 
-    mostrarMensagemPesquisa(
-      "O arquivo não respondeu. Tente novamente.",
+    showSearchMessage(
+      "O arquivo não respondeu à consulta.",
       "error"
     );
   }
 }
 
-function encontrarResultado(
-  entries,
-  normalizedTerm
-) {
+function findResult(entries, normalizedTerm) {
   return entries.find((entry) => {
     const candidates = [
       entry.normalized_term,
       entry.search_term,
-      ...(
-        Array.isArray(entry.aliases)
-          ? entry.aliases
-          : []
-      )
+      ...(Array.isArray(entry.aliases) ? entry.aliases : [])
     ]
       .filter(Boolean)
-      .map(normalizarTexto);
+      .map(normalizeText);
 
     return candidates.some((candidate) => {
       switch (entry.match_mode) {
@@ -457,317 +300,373 @@ function encontrarResultado(
   });
 }
 
-async function processarResultado(result) {
+async function processSearchResult(result) {
+  showSearchMessage("REGISTRO ENCONTRADO.", "success");
+
   if (
-    result.entry_type === "redirect" &&
+    ["redirect", "secret_page"].includes(result.entry_type) &&
     result.destination_url
   ) {
-    window.location.href = result.destination_url;
+    window.location.assign(result.destination_url);
     return;
   }
 
-  if (
-    result.entry_type === "secret_page" &&
-    result.destination_url
-  ) {
-    window.location.href = result.destination_url;
-    return;
-  }
-
-  const title =
+  let title =
     result.response_title ||
     result.search_term ||
-    "Registro encontrado";
+    "REGISTRO ENCONTRADO";
 
-  const message =
+  let content =
     result.response_message ||
-    "Existe um registro relacionado a esta pesquisa.";
+    "O arquivo reconheceu a consulta.";
 
-  const imageHTML = result.response_image_url
-    ? `
-      <img
-        src="${escaparAtributo(result.response_image_url)}"
-        alt=""
-        style="
-          width: 100%;
-          max-height: 180px;
-          margin-top: 9px;
-          object-fit: cover;
-          border: 2px solid white;
-          border-radius: 7px;
-        "
-      >
-    `
-    : "";
+  let image = result.response_image_url || "";
 
-  mostrarMensagemPesquisa(
-    `
-      <strong>${escaparHTML(title)}</strong>
-      <br>
-      ${escaparHTML(message)}
-      ${imageHTML}
-    `,
-    "success",
-    true
-  );
+  if (result.entry_type === "character" && result.character_id) {
+    const character = await loadCharacter(result.character_id);
+
+    if (character) {
+      title = character.name || title;
+      content =
+        character.full_content ||
+        character.public_description ||
+        content;
+      image = character.portrait_url || image;
+    }
+  }
+
+  if (result.entry_type === "post" && result.post_id) {
+    const post = await loadPost(result.post_id);
+
+    if (post) {
+      title = post.title || title;
+      content = post.content || post.excerpt || content;
+      image = post.cover_image_url || image;
+    }
+  }
+
+  openResultModal({
+    type: getResultTypeLabel(result.entry_type),
+    title,
+    content,
+    image
+  });
 
   if (result.response_audio_url) {
-    reproduzirAudioResultado(
-      result.response_audio_url
-    );
+    playAudio(result.response_audio_url);
   }
-
-  /*
-    O motor completo de eventos será ligado em outra etapa.
-    Por enquanto, esta verificação já deixa o local preparado.
-  */
 
   if (result.secret_event_id) {
-    console.info(
-      "Esta pesquisa possui um evento secreto associado:",
-      result.secret_event_id
-    );
+    await runSecretEvent(result.secret_event_id);
   }
 }
 
-function mostrarMensagemPesquisa(
-  message,
-  type = "default",
-  allowHTML = false
-) {
-  const container =
-    document.getElementById("search-message");
-
-  if (!container) {
-    return;
-  }
-
-  container.hidden = false;
-  container.dataset.type = type;
-
-  if (allowHTML) {
-    container.innerHTML = message;
-  } else {
-    container.textContent = message;
-  }
-}
-
-function reproduzirAudioResultado(url) {
-  if (!url) {
-    return;
-  }
-
+async function loadCharacter(id) {
   try {
-    const audio = new Audio(url);
+    const { data, error } = await publicState.client
+      .from("blog_characters")
+      .select(`
+        name,
+        public_description,
+        full_content,
+        portrait_url,
+        banner_url
+      `)
+      .eq("id", id)
+      .maybeSingle();
 
-    audio.volume = 0.65;
+    if (error) {
+      throw error;
+    }
 
-    audio.play().catch((error) => {
-      console.warn(
-        "O navegador bloqueou a reprodução automática:",
-        error
-      );
-    });
+    return data;
   } catch (error) {
-    console.error(
-      "Não foi possível preparar o áudio:",
-      error
-    );
+    console.error("Personagem não carregado:", error);
+    return null;
   }
 }
 
-/* ==========================================================
-   ATALHOS DE PERSONAGENS
-   ========================================================== */
+async function loadPost(id) {
+  try {
+    const { data, error } = await publicState.client
+      .from("blog_posts")
+      .select("title, excerpt, content, cover_image_url")
+      .eq("id", id)
+      .maybeSingle();
 
-function configurarAtalhosDePersonagens() {
-  const buttons = document.querySelectorAll(
-    "[data-character-search]"
-  );
+    if (error) {
+      throw error;
+    }
 
-  buttons.forEach((button) => {
-    button.addEventListener("click", async () => {
-      const term =
-        button.dataset.characterSearch?.trim();
-
-      if (!term) {
-        return;
-      }
-
-      const input =
-        document.getElementById(
-          "central-search-input"
-        );
-
-      if (input) {
-        input.value = term;
-      }
-
-      document
-        .getElementById("pesquisa")
-        ?.scrollIntoView({
-          behavior: "smooth",
-          block: "center"
-        });
-
-      window.setTimeout(() => {
-        pesquisarTermo(term);
-      }, 450);
-    });
-  });
+    return data;
+  } catch (error) {
+    console.error("Postagem não carregada:", error);
+    return null;
+  }
 }
 
-/* ==========================================================
-   ENQUETE LOCAL
-   ========================================================== */
+async function runSecretEvent(eventId) {
+  try {
+    const { data: event, error: eventError } = await publicState.client
+      .from("blog_secret_events")
+      .select("id, event_key, status, probability")
+      .eq("id", eventId)
+      .eq("status", "active")
+      .maybeSingle();
 
-function configurarEnquete() {
-  const form =
-    document.getElementById("garden-poll-form");
-
-  if (!form) {
-    return;
-  }
-
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
-
-    const selected = form.querySelector(
-      'input[name="garden-poll"]:checked'
-    );
-
-    const message =
-      document.getElementById("poll-message");
-
-    if (!message) {
+    if (eventError || !event) {
       return;
     }
 
-    if (!selected) {
-      message.hidden = false;
-      message.textContent =
-        "Escolha uma opção antes de votar.";
-
+    if (Math.random() > Number(event.probability ?? 1)) {
       return;
     }
 
-    localStorage.setItem(
-      "feras-flores-poll",
-      selected.value
-    );
+    const { data: steps, error: stepsError } = await publicState.client
+      .from("blog_event_steps")
+      .select(`
+        action_type,
+        duration_ms,
+        delay_before_ms,
+        text_content,
+        media_url,
+        target_url,
+        intensity,
+        settings,
+        step_order
+      `)
+      .eq("event_id", event.id)
+      .order("step_order", { ascending: true });
 
-    message.hidden = false;
-    message.textContent =
-      "Seu voto foi guardado no Jardim!";
-  });
-}
-
-/* ==========================================================
-   RELÓGIO FICTÍCIO
-   ========================================================== */
-
-function iniciarRelogioDoJardim() {
-  atualizarRelogioDoJardim();
-
-  publicState.clockInterval = window.setInterval(
-    atualizarRelogioDoJardim,
-    1000
-  );
-}
-
-function atualizarRelogioDoJardim() {
-  const timeElement =
-    document.getElementById("garden-clock-time");
-
-  const periodElement =
-    document.getElementById("garden-clock-period");
-
-  const weatherElement =
-    document.getElementById("garden-weather-text");
-
-  if (!timeElement || !periodElement) {
-    return;
-  }
-
-  const now = new Date();
-
-  timeElement.textContent =
-    new Intl.DateTimeFormat("pt-BR", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit"
-    }).format(now);
-
-  const hour = now.getHours();
-
-  if (hour >= 5 && hour < 12) {
-    periodElement.textContent =
-      "Manhã no Jardim";
-
-    if (weatherElement) {
-      weatherElement.textContent =
-        "Orvalho brilhante";
+    if (stepsError || !steps?.length) {
+      return;
     }
 
-    return;
-  }
-
-  if (hour >= 12 && hour < 18) {
-    periodElement.textContent =
-      "Tarde no Jardim";
-
-    if (weatherElement) {
-      weatherElement.textContent =
-        "Flores abertas";
+    for (const step of steps) {
+      await wait(Number(step.delay_before_ms || 0));
+      await runEventStep(step);
     }
-
-    return;
-  }
-
-  if (hour >= 18 && hour < 23) {
-    periodElement.textContent =
-      "Noite no Jardim";
-
-    if (weatherElement) {
-      weatherElement.textContent =
-        "Névoa rosada";
-    }
-
-    return;
-  }
-
-  periodElement.textContent =
-    "Horário silencioso";
-
-  if (weatherElement) {
-    weatherElement.textContent =
-      "Algo está acordado";
+  } catch (error) {
+    console.error("Evento secreto interrompido:", error);
+    clearEffects();
   }
 }
 
-/* ==========================================================
-   BOTÕES AINDA NÃO LIGADOS
-   ========================================================== */
+async function runEventStep(step) {
+  const duration = Number(step.duration_ms || 0);
 
-function configurarBotoesTemporarios() {
-  const temporaryButtons = document.querySelectorAll(
-    ".resource-links button, .help-box button, #show-all-posts-button"
-  );
+  switch (step.action_type) {
+    case "delay":
+      await wait(duration);
+      break;
 
-  temporaryButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      window.alert(
-        "Este recurso será liberado em uma próxima atualização do Jardim."
+    case "blackout":
+      await temporaryClass(
+        document.getElementById("blackout-layer"),
+        "is-visible",
+        duration
       );
-    });
+      break;
+
+    case "glitch":
+      await temporaryClass(document.body, "effect-glitch", duration);
+      break;
+
+    case "shake":
+      await temporaryClass(document.body, "effect-shake", duration);
+      break;
+
+    case "darken_left":
+      await temporaryClass(
+        document.getElementById("half-dark-layer"),
+        "is-left",
+        duration
+      );
+      break;
+
+    case "darken_right":
+      await temporaryClass(
+        document.getElementById("half-dark-layer"),
+        "is-right",
+        duration
+      );
+      break;
+
+    case "show_text":
+    case "type_text":
+      await showEventText(step.text_content || "", duration);
+      break;
+
+    case "play_audio":
+      playAudio(step.media_url);
+      if (duration > 0) {
+        await wait(duration);
+      }
+      break;
+
+    case "redirect":
+      if (step.target_url) {
+        window.location.assign(step.target_url);
+      }
+      break;
+
+    case "clear_effects":
+      clearEffects();
+      break;
+
+    default:
+      if (duration > 0) {
+        await wait(duration);
+      }
+      break;
+  }
+}
+
+async function temporaryClass(element, className, duration) {
+  if (!element) {
+    return;
+  }
+
+  element.classList.add(className);
+  await wait(Math.max(duration, 100));
+  element.classList.remove(className);
+}
+
+async function showEventText(text, duration) {
+  const layer = document.getElementById("event-text-layer");
+
+  if (!layer) {
+    return;
+  }
+
+  layer.textContent = text;
+  layer.hidden = false;
+
+  await wait(Math.max(duration, 1200));
+
+  layer.hidden = true;
+  layer.textContent = "";
+}
+
+function clearEffects() {
+  document.body.classList.remove("effect-glitch", "effect-shake");
+
+  document
+    .getElementById("blackout-layer")
+    ?.classList.remove("is-visible");
+
+  document
+    .getElementById("half-dark-layer")
+    ?.classList.remove("is-left", "is-right");
+
+  const textLayer = document.getElementById("event-text-layer");
+
+  if (textLayer) {
+    textLayer.hidden = true;
+    textLayer.textContent = "";
+  }
+}
+
+function playAudio(url) {
+  if (!url || !publicState.soundEnabled) {
+    return;
+  }
+
+  if (publicState.audio) {
+    publicState.audio.pause();
+  }
+
+  const audio = new Audio(url);
+  audio.volume = 0.7;
+
+  publicState.audio = audio;
+
+  audio.play().catch((error) => {
+    console.warn("Áudio bloqueado pelo navegador:", error);
   });
 }
 
-/* ==========================================================
-   UTILITÁRIOS
-   ========================================================== */
+function configureModal() {
+  document
+    .getElementById("result-modal-close")
+    ?.addEventListener("click", closeResultModal);
 
-function normalizarTexto(value) {
+  document
+    .getElementById("result-modal-backdrop")
+    ?.addEventListener("click", closeResultModal);
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeResultModal();
+    }
+  });
+}
+
+function openResultModal({ type, title, content, image }) {
+  const modal = document.getElementById("result-modal");
+  const typeElement = document.getElementById("result-modal-type");
+  const titleElement = document.getElementById("result-modal-title");
+  const contentElement = document.getElementById("result-modal-content");
+  const imageElement = document.getElementById("result-modal-image");
+
+  if (!modal) {
+    return;
+  }
+
+  typeElement.textContent = type;
+  titleElement.textContent = title;
+  contentElement.textContent = content;
+
+  if (image) {
+    imageElement.src = image;
+    imageElement.hidden = false;
+  } else {
+    imageElement.removeAttribute("src");
+    imageElement.hidden = true;
+  }
+
+  modal.hidden = false;
+  document.body.style.overflow = "hidden";
+}
+
+function closeResultModal() {
+  const modal = document.getElementById("result-modal");
+
+  if (!modal || modal.hidden) {
+    return;
+  }
+
+  modal.hidden = true;
+  document.body.style.overflow = "";
+}
+
+function showSearchMessage(message, type = "default") {
+  const element = document.getElementById("search-message");
+
+  if (!element) {
+    return;
+  }
+
+  element.hidden = false;
+  element.dataset.type = type;
+  element.textContent = message;
+}
+
+function getResultTypeLabel(type) {
+  const labels = {
+    character: "PERSONAGEM",
+    post: "REGISTRO",
+    resource: "ARQUIVO",
+    secret_event: "EVENTO",
+    secret_page: "PÁGINA OCULTA",
+    message: "MENSAGEM",
+    redirect: "REDIRECIONAMENTO"
+  };
+
+  return labels[type] || "REGISTRO";
+}
+
+function normalizeText(value) {
   return String(value || "")
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
@@ -776,34 +675,32 @@ function normalizarTexto(value) {
     .replace(/\s+/g, " ");
 }
 
-function escaparHTML(value) {
+function escapeHTML(value) {
   const element = document.createElement("div");
-
   element.textContent = String(value ?? "");
-
   return element.innerHTML;
 }
 
-function escaparAtributo(value) {
-  return escaparHTML(value)
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function formatarData(value) {
+function formatDate(value) {
   if (!value) {
-    return "Data não informada";
+    return "DATA NÃO INFORMADA";
   }
 
   const date = new Date(value);
 
   if (Number.isNaN(date.getTime())) {
-    return "Data não informada";
+    return "DATA NÃO INFORMADA";
   }
 
   return new Intl.DateTimeFormat("pt-BR", {
     day: "2-digit",
-    month: "long",
+    month: "2-digit",
     year: "numeric"
   }).format(date);
+}
+
+function wait(milliseconds) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, Math.max(0, milliseconds));
+  });
 }
