@@ -2,22 +2,40 @@
 
 /* ==========================================================
    FERAS E FLORES — CHAT SECRETO
-   Persistência local + Supabase
+   Repetição, irritação, travamento e memória
    ========================================================== */
 
 const chatState = {
   client: window.ferasFloresSupabase,
-  chatKey: new URLSearchParams(window.location.search).get("chat") || "algo",
+
+  chatKey:
+    new URLSearchParams(
+      window.location.search
+    ).get("chat") || "algo",
+
   localStorageKey: "",
-  playerTokenKey: "ff-anonymous-player-token-v1",
+
+  playerTokenKey:
+    "ff-anonymous-player-token-v1",
+
   config: null,
   memory: null,
-  isSending: false
+  isSending: false,
+
+  repeat: {
+    firstWarningAt: 1,
+    angryWarningAt: 2,
+    crashAt: 3
+  }
 };
 
 const chatElements = {};
 
-document.addEventListener("DOMContentLoaded", initializeChat);
+document.addEventListener(
+  "DOMContentLoaded",
+  initializeChat
+);
+
 
 /* ==========================================================
    INICIALIZAÇÃO
@@ -27,44 +45,66 @@ async function initializeChat() {
   mapChatElements();
 
   chatState.localStorageKey =
-    `ff-chat-${chatState.chatKey}-memory-v3`;
+    `ff-chat-${chatState.chatKey}-memory-v4`;
 
   configureChatForm();
+  configureSoundButton();
 
   if (!chatState.client) {
     showFatalError(
       "A conexão com o Supabase não foi iniciada."
     );
+
     return;
   }
 
   try {
-    const playerToken = getOrCreatePlayerToken();
+    const playerToken =
+      getOrCreatePlayerToken();
 
-    const remoteData = await loadRemoteChatState(
-      playerToken,
-      chatState.chatKey
-    );
+    const remoteData =
+      await loadRemoteChatState(
+        playerToken,
+        chatState.chatKey
+      );
 
-    if (!remoteData?.found || !remoteData?.chat) {
+    if (
+      !remoteData?.found ||
+      !remoteData?.chat
+    ) {
       showFatalError(
         "Este canal não existe ou está desativado."
       );
+
       return;
     }
 
-    chatState.config = remoteData.chat;
-    chatState.memory = mergeMemories(
-      createFreshMemory(),
-      loadLocalMemory(),
-      remoteData.state,
-      remoteData.history
-    );
+    chatState.config =
+      remoteData.chat;
+
+    chatState.memory =
+      mergeMemories(
+        createFreshMemory(),
+        loadLocalMemory(),
+        remoteData.state,
+        remoteData.history
+      );
 
     applyChatIdentity();
     renderHistory();
 
-    if (!chatState.memory.opened) {
+    if (
+      chatState.memory.repeat_crash_pending
+    ) {
+      chatState.memory.repeat_crash_pending =
+        false;
+
+      await addBotMessage(
+        "Você já cansou da sua brincadeira estúpida?"
+      );
+
+      await persistMemory();
+    } else if (!chatState.memory.opened) {
       const openingMessage =
         chatState.config.opening_message ||
         "...Você conseguiu abrir o canal.";
@@ -78,7 +118,10 @@ async function initializeChat() {
 
     focusInput();
   } catch (error) {
-    console.error("Falha ao iniciar o chat:", error);
+    console.error(
+      "Falha ao iniciar o chat:",
+      error
+    );
 
     showFatalError(
       "Não foi possível restaurar esta conversa."
@@ -111,6 +154,9 @@ function mapChatElements() {
   chatElements.sendButton =
     document.getElementById("chat-send-button");
 
+  chatElements.soundButton =
+    document.getElementById("enable-sound");
+
   chatElements.error =
     document.getElementById("chat-error");
 
@@ -119,15 +165,42 @@ function mapChatElements() {
 }
 
 function configureChatForm() {
-  if (!chatElements.form) {
-    return;
-  }
-
-  chatElements.form.addEventListener(
+  chatElements.form?.addEventListener(
     "submit",
     handlePlayerMessage
   );
 }
+
+function configureSoundButton() {
+  if (!chatElements.soundButton) {
+    return;
+  }
+
+  chatElements.soundButton.hidden =
+    window.localStorage.getItem("ff-sound") !== "off";
+
+  chatElements.soundButton.addEventListener(
+    "click",
+    async () => {
+      window.localStorage.setItem(
+        "ff-sound",
+        "on"
+      );
+
+      await window.FFEffects?.unlockAudio?.();
+
+      await window.FFEffects?.generatedTone?.({
+        frequency: 520,
+        duration: 110,
+        volume: 0.08,
+        type: "sine"
+      });
+
+      chatElements.soundButton.hidden = true;
+    }
+  );
+}
+
 
 /* ==========================================================
    IDENTIDADE ANÔNIMA
@@ -158,7 +231,8 @@ function getOrCreatePlayerToken() {
 function createFallbackUUID() {
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
     .replace(/[xy]/g, (character) => {
-      const random = Math.random() * 16 | 0;
+      const random =
+        Math.random() * 16 | 0;
 
       const value =
         character === "x"
@@ -173,6 +247,7 @@ function isValidUUID(value) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
     .test(String(value || ""));
 }
+
 
 /* ==========================================================
    MEMÓRIA
@@ -190,19 +265,26 @@ function createFreshMemory() {
     opened: false,
     asked_name: false,
     awaiting_name: false,
-    ask_name_at: null
+    ask_name_at: null,
+    repeat_crash_pending: false,
+    repeat_crash_total: 0,
+    last_normalized_message: null
   };
 }
 
 function loadLocalMemory() {
   try {
-    const parsed = JSON.parse(
-      window.localStorage.getItem(
-        chatState.localStorageKey
-      ) || "null"
-    );
+    const parsed =
+      JSON.parse(
+        window.localStorage.getItem(
+          chatState.localStorageKey
+        ) || "null"
+      );
 
-    return parsed && typeof parsed === "object"
+    return (
+      parsed &&
+      typeof parsed === "object"
+    )
       ? parsed
       : null;
   } catch (error) {
@@ -230,11 +312,12 @@ function mergeMemories(
     ...(remoteMemory || {})
   };
 
-  merged.flags = uniqueStrings([
-    ...(fresh.flags || []),
-    ...(localMemory?.flags || []),
-    ...(remoteMemory?.flags || [])
-  ]);
+  merged.flags =
+    uniqueStrings([
+      ...(fresh.flags || []),
+      ...(localMemory?.flags || []),
+      ...(remoteMemory?.flags || [])
+    ]);
 
   merged.message_counts = {
     ...(localMemory?.message_counts || {}),
@@ -246,28 +329,35 @@ function mergeMemories(
     ...(remoteMemory?.rule_uses || {})
   };
 
-  const serverHistory = Array.isArray(remoteHistory)
-    ? remoteHistory
-    : [];
+  const serverHistory =
+    Array.isArray(remoteHistory)
+      ? remoteHistory
+      : [];
 
   if (serverHistory.length) {
-    merged.history = serverHistory.map((message) => ({
-      role: message.role,
-      text: message.text || "",
-      media: message.media || null,
-      created_at: message.created_at || null
-    }));
+    merged.history =
+      serverHistory.map((message) => ({
+        role: message.role,
+        text: message.text || "",
+        media: message.media || null,
+        created_at:
+          message.created_at || null
+      }));
   } else {
-    merged.history = Array.isArray(localMemory?.history)
-      ? localMemory.history
-      : [];
+    merged.history =
+      Array.isArray(localMemory?.history)
+        ? localMemory.history
+        : [];
   }
 
   return merged;
 }
 
 function normalizeRemoteState(remoteState) {
-  if (!remoteState || typeof remoteState !== "object") {
+  if (
+    !remoteState ||
+    typeof remoteState !== "object"
+  ) {
     return null;
   }
 
@@ -279,6 +369,7 @@ function normalizeRemoteState(remoteState) {
 
   return {
     ...stateData,
+
     player_name:
       remoteState.player_name ??
       stateData.player_name ??
@@ -348,17 +439,29 @@ async function persistMemory(
   const playerToken =
     getOrCreatePlayerToken();
 
-  const { error } = await chatState.client.rpc(
-    "save_anonymous_chat_state",
-    {
-      p_player_token: playerToken,
-      p_chat_key: chatState.chatKey,
-      p_state: chatState.memory,
-      p_role: messageRole,
-      p_message: messageText,
-      p_media_url: mediaUrl
-    }
-  );
+  const { error } =
+    await chatState.client.rpc(
+      "save_anonymous_chat_state",
+      {
+        p_player_token:
+          playerToken,
+
+        p_chat_key:
+          chatState.chatKey,
+
+        p_state:
+          chatState.memory,
+
+        p_role:
+          messageRole,
+
+        p_message:
+          messageText,
+
+        p_media_url:
+          mediaUrl
+      }
+    );
 
   if (error) {
     console.warn(
@@ -372,13 +475,17 @@ async function loadRemoteChatState(
   playerToken,
   chatKey
 ) {
-  const { data, error } = await chatState.client.rpc(
-    "load_anonymous_chat_state",
-    {
-      p_player_token: playerToken,
-      p_chat_key: chatKey
-    }
-  );
+  const { data, error } =
+    await chatState.client.rpc(
+      "load_anonymous_chat_state",
+      {
+        p_player_token:
+          playerToken,
+
+        p_chat_key:
+          chatKey
+      }
+    );
 
   if (error) {
     throw error;
@@ -386,6 +493,7 @@ async function loadRemoteChatState(
 
   return data;
 }
+
 
 /* ==========================================================
    INTERFACE
@@ -401,7 +509,9 @@ function applyChatIdentity() {
   if (chatElements.channelLabel) {
     chatElements.channelLabel.textContent =
       chatState.config.name
-        ? String(chatState.config.name).toUpperCase()
+        ? String(
+            chatState.config.name
+          ).toUpperCase()
         : "CANAL NÃO IDENTIFICADO";
   }
 
@@ -425,7 +535,10 @@ function renderHistory() {
 
   chatElements.messages.innerHTML = "";
 
-  for (const message of chatState.memory.history) {
+  for (
+    const message of
+    chatState.memory.history
+  ) {
     appendMessageToInterface(
       message.role,
       message.text,
@@ -443,13 +556,18 @@ function appendMessageToInterface(
   mediaUrl = null,
   shouldScroll = true
 ) {
-  const element = document.createElement("article");
+  const element =
+    document.createElement("article");
 
-  element.className = `message ${role}`;
-  element.textContent = String(text || "");
+  element.className =
+    `message ${role}`;
+
+  element.textContent =
+    String(text || "");
 
   if (mediaUrl) {
-    const image = document.createElement("img");
+    const image =
+      document.createElement("img");
 
     image.src = mediaUrl;
     image.alt = "";
@@ -508,9 +626,11 @@ function showFatalError(message) {
   }
 
   if (chatElements.errorMessage) {
-    chatElements.errorMessage.textContent = message;
+    chatElements.errorMessage.textContent =
+      message;
   }
 }
+
 
 /* ==========================================================
    ENVIO DE MENSAGENS
@@ -524,45 +644,97 @@ async function handlePlayerMessage(event) {
   }
 
   const message =
-    chatElements.input?.value?.trim() || "";
+    chatElements.input?.value
+      ?.trim() || "";
 
   if (!message) {
     return;
   }
 
+  await window.FFEffects?.unlockAudio?.();
+
   chatState.isSending = true;
   setInputEnabled(false);
+
+  const normalized =
+    normalizeText(message);
+
+  const previousCount =
+    Number(
+      chatState.memory
+        .message_counts[
+          normalized
+        ] || 0
+    );
 
   try {
     chatElements.input.value = "";
 
-    await addPlayerMessage(message);
+    /*
+      A contagem não é incrementada antes de enviar o estado
+      para resolve_chat_message. Essa era a causa da primeira
+      mensagem ser interpretada como repetida.
+    */
+    await addPlayerMessage(
+      message,
+      false
+    );
+
+    if (previousCount > 0) {
+      await handleRepeatedMessage(
+        normalized,
+        previousCount
+      );
+
+      return;
+    }
 
     setTypingVisible(true);
 
-    const { data, error } = await chatState.client.rpc(
-      "resolve_chat_message",
-      {
-        p_chat_key: chatState.chatKey,
-        p_message: message,
-        p_state: chatState.memory
-      }
-    );
+    const stateForServer =
+      structuredCloneSafe(
+        chatState.memory
+      );
+
+    stateForServer.message_counts[
+      normalized
+    ] = previousCount;
+
+    const { data, error } =
+      await chatState.client.rpc(
+        "resolve_chat_message",
+        {
+          p_chat_key:
+            chatState.chatKey,
+
+          p_message:
+            message,
+
+          p_state:
+            stateForServer
+        }
+      );
 
     if (error) {
       throw error;
     }
 
+    incrementMessageCount(normalized);
+
     const responseDelay =
       Number(
-        data?.updates?.response_delay_ms ??
-        chatState.config.response_delay_ms ??
+        data?.updates
+          ?.response_delay_ms ??
+        chatState.config
+          .response_delay_ms ??
         600
       );
 
     await wait(responseDelay);
 
-    mergeChatUpdates(data?.updates || {});
+    mergeChatUpdates(
+      data?.updates || {}
+    );
 
     const responseText =
       data?.response ||
@@ -570,10 +742,14 @@ async function handlePlayerMessage(event) {
 
     await addBotMessage(
       responseText,
-      data?.updates?.typing_delay_ms
+      data?.updates
+        ?.typing_delay_ms
     );
 
-    for (const action of data?.actions || []) {
+    for (
+      const action of
+      data?.actions || []
+    ) {
       await executeChatAction(action);
     }
 
@@ -584,9 +760,9 @@ async function handlePlayerMessage(event) {
       error
     );
 
-    await addBotMessage(
-      "..."
-    );
+    incrementMessageCount(normalized);
+
+    await addBotMessage("...");
   } finally {
     setTypingVisible(false);
     setInputEnabled(true);
@@ -595,7 +771,10 @@ async function handlePlayerMessage(event) {
   }
 }
 
-async function addPlayerMessage(message) {
+async function addPlayerMessage(
+  message,
+  incrementCount = true
+) {
   appendMessageToInterface(
     "player",
     message
@@ -605,18 +784,26 @@ async function addPlayerMessage(message) {
     role: "player",
     text: message,
     media: null,
-    created_at: new Date().toISOString()
+    created_at:
+      new Date().toISOString()
   });
 
-  const normalized = normalizeText(message);
-
   chatState.memory.total_messages =
-    Number(chatState.memory.total_messages || 0) + 1;
-
-  chatState.memory.message_counts[normalized] =
     Number(
-      chatState.memory.message_counts[normalized] || 0
+      chatState.memory
+        .total_messages || 0
     ) + 1;
+
+  const normalized =
+    normalizeText(message);
+
+  chatState.memory
+    .last_normalized_message =
+      normalized;
+
+  if (incrementCount) {
+    incrementMessageCount(normalized);
+  }
 
   await persistMemory(
     "player",
@@ -625,11 +812,162 @@ async function addPlayerMessage(message) {
   );
 }
 
+function incrementMessageCount(normalized) {
+  chatState.memory
+    .message_counts[
+      normalized
+    ] =
+      Number(
+        chatState.memory
+          .message_counts[
+            normalized
+          ] || 0
+      ) + 1;
+}
+
+
+/* ==========================================================
+   REPETIÇÃO E IRRITAÇÃO
+   ========================================================== */
+
+async function handleRepeatedMessage(
+  normalized,
+  previousCount
+) {
+  incrementMessageCount(normalized);
+
+  chatState.memory.irritation =
+    Number(
+      chatState.memory
+        .irritation || 0
+    ) + 1;
+
+  setTypingVisible(true);
+
+  await wait(
+    Number(
+      chatState.config
+        .response_delay_ms || 500
+    )
+  );
+
+  if (
+    previousCount ===
+    chatState.repeat.firstWarningAt
+  ) {
+    await addBotMessage(
+      "Eu já respondi isso."
+    );
+
+    await persistMemory();
+
+    return;
+  }
+
+  if (
+    previousCount ===
+    chatState.repeat.angryWarningAt
+  ) {
+    await addBotMessage(
+      "Eu já respondi isso. Pare."
+    );
+
+    await window.FFEffects
+      ?.generatedTone?.({
+        frequency: 180,
+        duration: 180,
+        volume: 0.11,
+        type: "square"
+      });
+
+    await persistMemory();
+
+    return;
+  }
+
+  if (
+    previousCount >=
+    chatState.repeat.crashAt
+  ) {
+    await triggerRepeatCrash();
+
+    return;
+  }
+
+  await addBotMessage(
+    "Eu já respondi isso."
+  );
+
+  await persistMemory();
+}
+
+async function triggerRepeatCrash() {
+  chatState.memory
+    .repeat_crash_pending = true;
+
+  chatState.memory
+    .repeat_crash_total =
+      Number(
+        chatState.memory
+          .repeat_crash_total || 0
+      ) + 1;
+
+  chatState.memory.flags =
+    uniqueStrings([
+      ...(chatState.memory.flags || []),
+      "algo_repeat_crash"
+    ]);
+
+  await persistMemory();
+
+  setTypingVisible(false);
+
+  await addBotMessage("Chega.");
+
+  document.body.classList.add(
+    "glitch",
+    "shake"
+  );
+
+  document
+    .getElementById("fxBlack")
+    ?.classList.add("on");
+
+  const text =
+    document.getElementById("fxText");
+
+  if (text) {
+    text.textContent =
+      "VOCÊ NÃO ESTÁ OUVINDO.";
+
+    text.hidden = false;
+  }
+
+  /*
+    O som é gerado pelo navegador e não depende de MP3.
+    Assim evitamos erro de MIME durante este efeito.
+  */
+  await window.FFEffects
+    ?.playShriek?.(1350);
+
+  await wait(250);
+
+  window.location.replace(
+    "index.html?chat_closed=repeat"
+  );
+}
+
+
+/* ==========================================================
+   RESPOSTAS DE ALGO
+   ========================================================== */
+
 async function addBotMessage(
   text,
   typingDelay
 ) {
-  const finalText = String(text || "...");
+  const finalText =
+    String(text || "...");
 
   const messageElement =
     appendMessageToInterface(
@@ -639,20 +977,27 @@ async function addBotMessage(
       false
     );
 
-  const delay = Math.min(
-    Math.max(
-      Number(
-        typingDelay ??
-        chatState.config?.typing_delay_ms ??
-        28
+  const delay =
+    Math.min(
+      Math.max(
+        Number(
+          typingDelay ??
+          chatState.config
+            ?.typing_delay_ms ??
+          28
+        ),
+        0
       ),
-      0
-    ),
-    80
-  );
+      80
+    );
 
-  for (const character of finalText) {
-    messageElement.textContent += character;
+  for (
+    const character of
+    finalText
+  ) {
+    messageElement.textContent +=
+      character;
+
     scrollMessagesToBottom();
 
     if (delay > 0) {
@@ -664,7 +1009,8 @@ async function addBotMessage(
     role: "algo",
     text: finalText,
     media: null,
-    created_at: new Date().toISOString()
+    created_at:
+      new Date().toISOString()
   });
 
   await persistMemory(
@@ -676,16 +1022,24 @@ async function addBotMessage(
 
 function chooseDefaultResponse() {
   const responses =
-    chatState.config?.default_responses;
+    chatState.config
+      ?.default_responses;
 
-  if (!Array.isArray(responses) || !responses.length) {
+  if (
+    !Array.isArray(responses) ||
+    !responses.length
+  ) {
     return "Não entendi.";
   }
 
   return responses[
-    Math.floor(Math.random() * responses.length)
+    Math.floor(
+      Math.random() *
+      responses.length
+    )
   ];
 }
+
 
 /* ==========================================================
    ATUALIZAÇÕES E AÇÕES
@@ -693,59 +1047,95 @@ function chooseDefaultResponse() {
 
 function mergeChatUpdates(updates) {
   if (
-    updates.player_name !== undefined &&
+    updates.player_name !==
+      undefined &&
     updates.player_name !== null
   ) {
     chatState.memory.player_name =
       updates.player_name;
   }
 
-  if (updates.awaiting_name !== undefined) {
+  if (
+    updates.awaiting_name !==
+    undefined
+  ) {
     chatState.memory.awaiting_name =
-      Boolean(updates.awaiting_name);
+      Boolean(
+        updates.awaiting_name
+      );
   }
 
-  if (updates.asked_name !== undefined) {
+  if (
+    updates.asked_name !==
+    undefined
+  ) {
     chatState.memory.asked_name =
-      Boolean(updates.asked_name);
+      Boolean(
+        updates.asked_name
+      );
   }
 
-  if (updates.ask_name_at !== undefined) {
+  if (
+    updates.ask_name_at !==
+    undefined
+  ) {
     chatState.memory.ask_name_at =
       updates.ask_name_at;
   }
 
-  if (updates.irritation !== undefined) {
+  if (
+    updates.irritation !==
+    undefined
+  ) {
     chatState.memory.irritation =
-      Number(updates.irritation || 0);
-  }
-
-  if (Array.isArray(updates.unlock_flags)) {
-    chatState.memory.flags = uniqueStrings([
-      ...(chatState.memory.flags || []),
-      ...updates.unlock_flags
-    ]);
-  }
-
-  if (Array.isArray(updates.remove_flags)) {
-    chatState.memory.flags =
-      chatState.memory.flags.filter(
-        (flag) =>
-          !updates.remove_flags.includes(flag)
+      Number(
+        updates.irritation || 0
       );
+  }
+
+  if (
+    Array.isArray(
+      updates.unlock_flags
+    )
+  ) {
+    chatState.memory.flags =
+      uniqueStrings([
+        ...(chatState.memory
+          .flags || []),
+
+        ...updates.unlock_flags
+      ]);
+  }
+
+  if (
+    Array.isArray(
+      updates.remove_flags
+    )
+  ) {
+    chatState.memory.flags =
+      chatState.memory.flags
+        .filter(
+          (flag) =>
+            !updates
+              .remove_flags
+              .includes(flag)
+        );
   }
 
   if (updates.rule_id) {
     const currentUses =
       Number(
-        chatState.memory.rule_uses[
-          updates.rule_id
-        ] || 0
+        chatState.memory
+          .rule_uses[
+            updates.rule_id
+          ] || 0
       );
 
-    chatState.memory.rule_uses[
-      updates.rule_id
-    ] = currentUses + 1;
+    chatState.memory
+      .rule_uses[
+        updates.rule_id
+      ] =
+        currentUses + 1;
   }
 }
 
@@ -754,22 +1144,32 @@ async function executeChatAction(action) {
     case "unlock_flag":
       chatState.memory.flags =
         uniqueStrings([
-          ...(chatState.memory.flags || []),
+          ...(chatState.memory
+            .flags || []),
+
           action.value_text
         ]);
       return;
 
     case "remove_flag":
       chatState.memory.flags =
-        chatState.memory.flags.filter(
-          (flag) => flag !== action.value_text
-        );
+        chatState.memory.flags
+          .filter(
+            (flag) =>
+              flag !==
+              action.value_text
+          );
       return;
 
     case "change_irritation":
       chatState.memory.irritation =
-        Number(chatState.memory.irritation || 0) +
-        Number(action.value_number || 0);
+        Number(
+          chatState.memory
+            .irritation || 0
+        ) +
+        Number(
+          action.value_number || 0
+        );
       return;
 
     case "set_name":
@@ -778,25 +1178,40 @@ async function executeChatAction(action) {
       return;
 
     case "close_chat":
-      window.location.assign("index.html");
+      window.location.assign(
+        "index.html"
+      );
       return;
 
     default:
       if (
         window.FFEffects &&
-        typeof window.FFEffects.step === "function"
+        typeof window.FFEffects.step ===
+          "function"
       ) {
         await window.FFEffects.step({
-          action_type: action.action_type,
-          duration_ms: action.duration_ms,
-          text_content: action.text_content,
-          media_url: action.media_url,
-          target_url: action.target_url,
-          settings: action.settings
+          action_type:
+            action.action_type,
+
+          duration_ms:
+            action.duration_ms,
+
+          text_content:
+            action.text_content,
+
+          media_url:
+            action.media_url,
+
+          target_url:
+            action.target_url,
+
+          settings:
+            action.settings
         });
       }
   }
 }
+
 
 /* ==========================================================
    UTILITÁRIOS
@@ -805,7 +1220,10 @@ async function executeChatAction(action) {
 function normalizeText(value) {
   return String(value || "")
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replace(
+      /[\u0300-\u036f]/g,
+      ""
+    )
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ");
@@ -816,7 +1234,10 @@ function uniqueStrings(values) {
     ...new Set(
       values
         .filter(Boolean)
-        .map((value) => String(value))
+        .map(
+          (value) =>
+            String(value)
+        )
     )
   ];
 }
@@ -825,7 +1246,10 @@ function wait(milliseconds) {
   return new Promise((resolve) => {
     window.setTimeout(
       resolve,
-      Math.max(0, Number(milliseconds || 0))
+      Math.max(
+        0,
+        Number(milliseconds || 0)
+      )
     );
   });
 }
@@ -835,4 +1259,17 @@ function escapeCSSURL(value) {
     .replace(/\\/g, "\\\\")
     .replace(/"/g, '\\"')
     .replace(/\n/g, "");
+}
+
+function structuredCloneSafe(value) {
+  if (
+    typeof window.structuredClone ===
+    "function"
+  ) {
+    return window.structuredClone(value);
+  }
+
+  return JSON.parse(
+    JSON.stringify(value)
+  );
 }

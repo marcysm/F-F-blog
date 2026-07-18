@@ -28,13 +28,23 @@
         </h1>
       </div>
 
-      <a
-        class="chat-exit"
-        href="index.html"
-        aria-label="Voltar ao arquivo"
-      >
-        SAIR
-      </a>
+      <div class="chat-header-actions">
+        <button
+          id="enable-sound"
+          class="chat-sound-button"
+          type="button"
+          hidden
+        >
+          ATIVAR SOM
+        </button>
+
+        <a
+          class="chat-exit"
+          href="index.html"
+        >
+          SAIR
+        </a>
+      </div>
     </header>
 
     <section
@@ -91,6 +101,7 @@
     hidden
   >
     <h1>CANAL INDISPONÍVEL</h1>
+
     <p id="chat-error-message">
       Não foi possível abrir esta conversa.
     </p>
