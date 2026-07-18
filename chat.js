@@ -1,84 +1,35 @@
 "use strict";
-
-/* ==========================================================
-   FERAS E FLORES — CHAT SECRETO
-   ========================================================== */
-
-const chatClient = window.ferasFloresSupabase;
-const chatKey =
-  new URLSearchParams(window.location.search).get("chat") || "algo";
-const chatStoreKey = `ff-chat-${chatKey}-v2`;
-
-const chatElements = {
-  shell: document.getElementById("chatShell"),
-  speaker: document.getElementById("speaker"),
-  messages: document.getElementById("messages"),
-  typing: document.getElementById("typing"),
-  form: document.getElementById("chatForm"),
-  input: document.getElementById("chatInput"),
-  reset: document.getElementById("resetChat")
-};
-
-let chatConfig = null;
-let chatState = null;
-let sending = false;
-
-window.addEventListener("DOMContentLoaded", initializeChat);
-
-async function initializeChat() {
-  if (!chatClient) {
-    showFatalChatError("O canal não conseguiu se conectar ao arquivo.");
-    return;
-  }
-
-  const { data, error } = await chatClient.rpc("get_secret_chat", {
-    p_chat_key: chatKey
+const client = window.ferasFloresSupabase;
+const key = new URLSearchParams(location.search).get("chat") || "algo";
+const storeKey = `ff-chat-${key}-v2`;
+let cfg, state;
+document.addEventListener("DOMContentLoaded", init);
+async function init() {
+  const { data, error } = await client.rpc("get_secret_chat", {
+    p_chat_key: key,
   });
-
   if (error || !data?.found) {
-    console.error("Canal não encontrado:", error);
-    showFatalChatError("Canal inexistente.");
+    document.body.textContent = "Canal inexistente.";
     return;
   }
-
-  chatConfig = data;
-  chatState = loadChatState();
-
-  if (chatElements.speaker) {
-    chatElements.speaker.textContent =
-      chatConfig.speaker_name || "Algo";
+  cfg = data;
+  speaker.textContent = cfg.speaker_name;
+  state = load();
+  render();
+  if (!state.opened) {
+    await bot(cfg.opening_message);
+    state.opened = true;
+    save();
   }
-
-  renderChatHistory();
-  configureChatEvents();
-
-  if (!chatState.opened) {
-    await sendBotMessage(chatConfig.opening_message || "...");
-    chatState.opened = true;
-    saveChatState();
-  }
-
-  chatElements.input?.focus();
-}
-
-function configureChatEvents() {
-  chatElements.form?.addEventListener("submit", handlePlayerMessage);
-
-  chatElements.reset?.addEventListener("click", () => {
-    const confirmed = window.confirm(
-      "Apagar a memória deste chat neste navegador?"
-    );
-
-    if (!confirmed) {
-      return;
+  chatForm.onsubmit = send;
+  resetChat.onclick = () => {
+    if (confirm("Apagar a memória deste chat neste navegador?")) {
+      localStorage.removeItem(storeKey);
+      location.reload();
     }
-
-    localStorage.removeItem(chatStoreKey);
-    window.location.reload();
-  });
+  };
 }
-
-function createFreshChatState() {
+function fresh() {
   return {
     player_name: null,
     total_messages: 0,
@@ -89,277 +40,132 @@ function createFreshChatState() {
     history: [],
     opened: false,
     asked_name: false,
-    awaiting_name: false
+    awaiting_name: false,
   };
 }
-
-function loadChatState() {
+function load() {
   try {
-    const saved = JSON.parse(localStorage.getItem(chatStoreKey));
-    return Object.assign(createFreshChatState(), saved || {});
-  } catch (error) {
-    console.warn("Memória do chat inválida.", error);
-    return createFreshChatState();
+    return Object.assign(
+      fresh(),
+      JSON.parse(localStorage.getItem(storeKey)) || {},
+    );
+  } catch {
+    return fresh();
   }
 }
-
-function saveChatState() {
-  localStorage.setItem(chatStoreKey, JSON.stringify(chatState));
+function save() {
+  localStorage.setItem(storeKey, JSON.stringify(state));
 }
-
-function renderChatHistory() {
-  if (!chatElements.messages) {
+function render() {
+  messages.innerHTML = "";
+  for (const m of state.history) add(m.role, m.text, m.media, false);
+  messages.scrollTop = messages.scrollHeight;
+}
+async function send(e) {
+  e.preventDefault();
+  const msg = chatInput.value.trim();
+  if (!msg) return;
+  chatInput.value = "";
+  add("player", msg);
+  state.history.push({ role: "player", text: msg });
+  const n = norm(msg);
+  state.total_messages++;
+  state.message_counts[n] = (state.message_counts[n] || 0) + 1;
+  save();
+  typing.hidden = false;
+  chatInput.disabled = true;
+  const { data, error } = await client.rpc("resolve_chat_message", {
+    p_chat_key: key,
+    p_message: msg,
+    p_state: state,
+  });
+  const delay =
+    data?.updates?.response_delay_ms ?? cfg.response_delay_ms ?? 600;
+  await new Promise((r) => setTimeout(r, delay));
+  typing.hidden = true;
+  chatInput.disabled = false;
+  chatInput.focus();
+  if (error || !data?.found) {
+    await bot("...");
     return;
   }
-
-  chatElements.messages.innerHTML = "";
-
-  for (const message of chatState.history || []) {
-    addMessageElement(
-      message.role,
-      message.text,
-      message.media,
-      false
-    );
-  }
-
-  scrollChatToBottom();
+  merge(data.updates || {});
+  await bot(data.response || "...", data.updates?.typing_delay_ms);
+  for (const a of data.actions || []) await runAction(a);
+  save();
 }
-
-async function handlePlayerMessage(event) {
-  event.preventDefault();
-
-  if (sending) {
-    return;
-  }
-
-  const message = chatElements.input?.value.trim() || "";
-
-  if (!message) {
-    return;
-  }
-
-  sending = true;
-  setChatBusy(true);
-
-  try {
-    chatElements.input.value = "";
-
-    addMessageElement("player", message);
-    chatState.history.push({ role: "player", text: message });
-
-    const normalizedMessage = normalizeText(message);
-    chatState.total_messages = Number(chatState.total_messages || 0) + 1;
-    chatState.message_counts[normalizedMessage] =
-      Number(chatState.message_counts[normalizedMessage] || 0) + 1;
-
-    saveChatState();
-
-    const { data, error } = await chatClient.rpc(
-      "resolve_chat_message",
-      {
-        p_chat_key: chatKey,
-        p_message: message,
-        p_state: chatState
-      }
-    );
-
-    const responseDelay = Number(
-      data?.updates?.response_delay_ms ??
-      chatConfig.response_delay_ms ??
-      600
-    );
-
-    await window.FFEffects.wait(responseDelay);
-
-    if (error || !data?.found) {
-      console.error("Resposta do chat indisponível:", error);
-      await sendBotMessage("...");
-      return;
-    }
-
-    mergeChatUpdates(data.updates || {});
-
-    await sendBotMessage(
-      data.response || "...",
-      data.updates?.typing_delay_ms
-    );
-
-    for (const action of data.actions || []) {
-      await runChatAction(action);
-    }
-
-    saveChatState();
-  } finally {
-    sending = false;
-    setChatBusy(false);
-    chatElements.input?.focus();
-  }
+function merge(u) {
+  if (u.player_name) state.player_name = u.player_name;
+  if (u.awaiting_name !== undefined) state.awaiting_name = u.awaiting_name;
+  if (u.asked_name !== undefined) state.asked_name = u.asked_name;
+  if (u.ask_name_at) state.ask_name_at = u.ask_name_at;
+  if (u.irritation !== undefined) state.irritation = u.irritation;
+  if (u.unlock_flags)
+    state.flags = [...new Set([...(state.flags || []), ...u.unlock_flags])];
+  if (u.remove_flags)
+    state.flags = state.flags.filter((x) => !u.remove_flags.includes(x));
+  if (u.rule_id)
+    state.rule_uses[u.rule_id] = (state.rule_uses[u.rule_id] || 0) + 1;
 }
-
-function mergeChatUpdates(updates) {
-  if (updates.player_name) {
-    chatState.player_name = updates.player_name;
+async function bot(text, typingDelay = 28) {
+  const final = String(text || "");
+  const el = add("algo", "");
+  for (const ch of final) {
+    el.textContent += ch;
+    messages.scrollTop = messages.scrollHeight;
+    await new Promise((r) => setTimeout(r, Math.min(typingDelay || 28, 60)));
   }
-
-  if (updates.awaiting_name !== undefined) {
-    chatState.awaiting_name = updates.awaiting_name;
-  }
-
-  if (updates.asked_name !== undefined) {
-    chatState.asked_name = updates.asked_name;
-  }
-
-  if (updates.ask_name_at !== undefined) {
-    chatState.ask_name_at = updates.ask_name_at;
-  }
-
-  if (updates.irritation !== undefined) {
-    chatState.irritation = updates.irritation;
-  }
-
-  if (updates.unlock_flags) {
-    chatState.flags = [
-      ...new Set([
-        ...(chatState.flags || []),
-        ...updates.unlock_flags
-      ])
-    ];
-  }
-
-  if (updates.remove_flags) {
-    chatState.flags = (chatState.flags || []).filter(
-      (flag) => !updates.remove_flags.includes(flag)
-    );
-  }
-
-  if (updates.rule_id) {
-    chatState.rule_uses[updates.rule_id] =
-      Number(chatState.rule_uses[updates.rule_id] || 0) + 1;
-  }
+  state.history.push({ role: "algo", text: final });
+  save();
 }
-
-async function sendBotMessage(text, typingDelay = 28) {
-  const finalText = String(text || "");
-  const element = addMessageElement("algo", "");
-  const delay = Math.min(Number(typingDelay || 28), 60);
-
-  for (const character of finalText) {
-    element.textContent += character;
-    scrollChatToBottom();
-    await window.FFEffects.wait(delay);
-  }
-
-  chatState.history.push({ role: "algo", text: finalText });
-  saveChatState();
-}
-
-function addMessageElement(role, text, media, scroll = true) {
-  const element = document.createElement("div");
-  element.className = `message ${role}`;
-  element.textContent = text || "";
-
+function add(role, text, media, scroll = true) {
+  const el = document.createElement("div");
+  el.className = `message ${role}`;
+  el.textContent = text || "";
   if (media) {
-    const image = document.createElement("img");
-    image.src = media;
-    image.alt = "";
-    element.appendChild(image);
+    const img = document.createElement("img");
+    img.src = media;
+    el.appendChild(img);
   }
-
-  chatElements.messages?.appendChild(element);
-
-  if (scroll) {
-    scrollChatToBottom();
-  }
-
-  return element;
+  messages.appendChild(el);
+  if (scroll) messages.scrollTop = messages.scrollHeight;
+  return el;
 }
-
-function scrollChatToBottom() {
-  if (chatElements.messages) {
-    chatElements.messages.scrollTop =
-      chatElements.messages.scrollHeight;
+async function runAction(a) {
+  if (a.action_type === "unlock_flag") {
+    state.flags = [...new Set([...state.flags, a.value_text])];
+    return;
   }
+  if (a.action_type === "remove_flag") {
+    state.flags = state.flags.filter((x) => x !== a.value_text);
+    return;
+  }
+  if (a.action_type === "change_irritation") {
+    state.irritation += Number(a.value_number || 0);
+    return;
+  }
+  if (a.action_type === "set_name") {
+    state.player_name = a.value_text;
+    return;
+  }
+  if (a.action_type === "close_chat") {
+    location.href = "index.html";
+    return;
+  }
+  await FFEffects.step({
+    action_type: a.action_type,
+    duration_ms: a.duration_ms,
+    text_content: a.text_content,
+    media_url: a.media_url,
+    target_url: a.target_url,
+    settings: a.settings,
+  });
 }
-
-function setChatBusy(busy) {
-  if (chatElements.typing) {
-    chatElements.typing.hidden = !busy;
-  }
-
-  if (chatElements.input) {
-    chatElements.input.disabled = busy;
-  }
-
-  const submitButton = chatElements.form?.querySelector(
-    'button[type="submit"]'
-  );
-
-  if (submitButton) {
-    submitButton.disabled = busy;
-  }
-}
-
-async function runChatAction(action) {
-  switch (action.action_type) {
-    case "unlock_flag":
-      chatState.flags = [
-        ...new Set([...(chatState.flags || []), action.value_text])
-      ];
-      return;
-
-    case "remove_flag":
-      chatState.flags = (chatState.flags || []).filter(
-        (flag) => flag !== action.value_text
-      );
-      return;
-
-    case "change_irritation":
-      chatState.irritation =
-        Number(chatState.irritation || 0) +
-        Number(action.value_number || 0);
-      return;
-
-    case "set_name":
-      chatState.player_name = action.value_text;
-      return;
-
-    case "close_chat":
-      window.location.href = "index.html";
-      return;
-
-    default:
-      await window.FFEffects.step({
-        action_type: action.action_type,
-        duration_ms: action.duration_ms,
-        text_content: action.text_content,
-        media_url: action.media_url,
-        target_url: action.target_url,
-        settings: action.settings
-      });
-  }
-}
-
-function showFatalChatError(message) {
-  document.body.innerHTML = `
-    <main class="chat-error">
-      <p>${escapeHTML(message)}</p>
-      <a href="index.html">VOLTAR AO ARQUIVO</a>
-    </main>
-  `;
-}
-
-function normalizeText(value) {
-  return String(value || "")
+function norm(v) {
+  return String(v)
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ");
-}
-
-function escapeHTML(value) {
-  const element = document.createElement("div");
-  element.textContent = String(value ?? "");
-  return element.innerHTML;
 }

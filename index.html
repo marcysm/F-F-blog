@@ -1,150 +1,85 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
- <head>
-  <meta charset="utf-8"/>
-  <meta content="width=device-width,initial-scale=1" name="viewport"/>
-  <meta content="Arquivo oficial de Feras e Flores" name="description"/>
-  <title>
-   Feras e Flores &mdash; Arquivo
-  </title>
-  <link href="style.css" rel="stylesheet"/>
- </head>
- <body>
-  <div class="noise">
-  </div>
-  <header class="top">
-   <a class="logo" href="index.html">
-    <b>
-     FERAS &amp; FLORES
-    </b>
-    <small>
-     ARQUIVO DO JARDIM
-    </small>
-   </a>
-   <div>
-    <button id="soundToggle" type="button">
-     SOM: LIGADO
-    </button>
-    <a href="login.html">
-     ACESSO
-    </a>
-   </div>
-  </header>
-  <main>
-   <section class="hero">
-    <p class="tag">
-     ARQUIVO P&Uacute;BLICO // CONSULTA LIVRE
-    </p>
-    <h1 id="heroTitle">
-     PROCURE UM NOME.
-     <span id="heroAccent">
-      DESCUBRA O QUE ELE ESCONDE.
-     </span>
-    </h1>
-    <p class="intro">
-     Personagens, criaturas, lugares, frases e c&oacute;digos podem possuir registros. Algumas respostas n&atilde;o deveriam existir.
-    </p>
-    <form id="searchForm" novalidate="">
-     <label for="searchInput">
-      DIGITE SUA CONSULTA
-     </label>
-     <div class="search">
-      <input aria-label="Consulta do arquivo" autocomplete="off" id="searchInput" placeholder="Ex.: nome, lugar, frase ou c&oacute;digo" spellcheck="false" type="search"/>
-      <button type="submit">
-       BUSCAR &rarr;
-      </button>
-     </div>
-    </form>
-    <div class="status" hidden="" id="searchStatus">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="description" content="Arquivo oficial de Feras e Flores" />
+    <title>Feras e Flores — Arquivo</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="noise"></div>
+    <header class="top">
+      <a class="logo" href="index.html"
+        ><b>FERAS & FLORES</b><small>ARQUIVO DO JARDIM</small></a
+      >
+      <div>
+        <button id="soundToggle">SOM: LIGADO</button
+        ><a href="login.html">ACESSO</a>
+      </div>
+    </header>
+    <main>
+      <section class="hero">
+        <p class="tag">ARQUIVO PÚBLICO // CONSULTA LIVRE</p>
+        <h1 id="heroTitle">
+          PROCURE UM NOME.<span id="heroAccent"
+            >DESCUBRA O QUE ELE ESCONDE.</span
+          >
+        </h1>
+        <p class="intro">
+          Personagens, criaturas, lugares, frases e códigos podem possuir
+          registros. Algumas respostas não deveriam existir.
+        </p>
+        <form id="searchForm">
+          <label for="searchInput">DIGITE SUA CONSULTA</label>
+          <div class="search">
+            <input
+              id="searchInput"
+              autocomplete="off"
+              placeholder="Ex.: nome, lugar, frase ou código"
+            /><button>BUSCAR →</button>
+          </div>
+        </form>
+        <div id="searchStatus" class="status" hidden></div>
+      </section>
+      <section class="strip">
+        <div><small>ESTADO</small><b>ONLINE</b></div>
+        <div><small>HORÁRIO LOCAL</small><b id="clock">00:00:00</b></div>
+        <div><small>REGISTROS</small><b id="postCount">—</b></div>
+      </section>
+      <section class="records">
+        <p class="tag">ATUALIZAÇÕES DO ARQUIVO</p>
+        <h2>REGISTROS RECENTES</h2>
+        <div id="posts" class="grid">
+          <article>
+            <small>000</small>
+            <h3>NENHUM REGISTRO PUBLICADO</h3>
+            <p>As publicações do painel aparecerão aqui.</p>
+          </article>
+        </div>
+      </section>
+    </main>
+    <footer>
+      <b>FERAS & FLORES</b
+      ><span id="footerText">Nem todos os registros são confiáveis.</span>
+    </footer>
+    <div id="modal" class="modal" hidden>
+      <div class="backdrop" data-close></div>
+      <article>
+        <button data-close>×</button>
+        <p id="modalType" class="tag"></p>
+        <h2 id="modalTitle"></h2>
+        <img id="modalImage" hidden />
+        <div id="modalContent"></div>
+      </article>
     </div>
-   </section>
-   <section class="strip">
-    <div>
-     <small>
-      ESTADO
-     </small>
-     <b>
-      ONLINE
-     </b>
-    </div>
-    <div>
-     <small>
-      HOR&Aacute;RIO LOCAL
-     </small>
-     <b id="clock">
-      00:00:00
-     </b>
-    </div>
-    <div>
-     <small>
-      REGISTROS
-     </small>
-     <b id="postCount">
-      &mdash;
-     </b>
-    </div>
-   </section>
-   <section class="records">
-    <p class="tag">
-     ATUALIZA&Ccedil;&Otilde;ES DO ARQUIVO
-    </p>
-    <h2>
-     REGISTROS RECENTES
-    </h2>
-    <div class="grid" id="posts">
-     <article>
-      <small>
-       000
-      </small>
-      <h3>
-       NENHUM REGISTRO PUBLICADO
-      </h3>
-      <p>
-       As publica&ccedil;&otilde;es do painel aparecer&atilde;o aqui.
-      </p>
-     </article>
-    </div>
-   </section>
-  </main>
-  <footer>
-   <b>
-    FERAS &amp; FLORES
-   </b>
-   <span id="footerText">
-    Nem todos os registros s&atilde;o confi&aacute;veis.
-   </span>
-  </footer>
-  <div class="modal" hidden="" id="modal">
-   <div class="backdrop" data-close="">
-   </div>
-   <article>
-    <button data-close="" type="button">
-     &times;
-    </button>
-    <p class="tag" id="modalType">
-    </p>
-    <h2 id="modalTitle">
-    </h2>
-    <img hidden="" id="modalImage"/>
-    <div id="modalContent">
-    </div>
-   </article>
-  </div>
-  <div class="fx-black" id="fxBlack">
-  </div>
-  <div class="fx-half" id="fxHalf">
-  </div>
-  <div class="fx-text" hidden="" id="fxText">
-  </div>
-  <div class="fx-media" hidden="" id="fxMedia">
-  </div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
-  </script>
-  <script src="config.js">
-  </script>
-  <script src="effects.js">
-  </script>
-  <script src="app.js">
-  </script>
- </body>
+    <div id="fxBlack" class="fx-black"></div>
+    <div id="fxHalf" class="fx-half"></div>
+    <div id="fxText" class="fx-text" hidden></div>
+    <div id="fxMedia" class="fx-media" hidden></div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script src="effects.js"></script>
+    <script src="app.js"></script>
+  </body>
 </html>
