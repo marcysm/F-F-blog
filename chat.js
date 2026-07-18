@@ -22,7 +22,6 @@ async function init() {
     save();
   }
   chatForm.onsubmit = send;
-  resetChat.onclick = () => {
     if (confirm("Apagar a memória deste chat neste navegador?")) {
       localStorage.removeItem(storeKey);
       location.reload();
