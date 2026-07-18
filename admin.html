@@ -1,1 +1,100 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Painel — Feras e Flores</title><link rel="stylesheet" href="admin.css"></head><body data-page="admin" class="admin-page"><section id="authScreen" class="auth-screen"><div><p class="tag">CONTROLE DE ACESSO</p><h1>VERIFICANDO AUTORIZAÇÃO</h1><p id="authMessage">Lendo sessão...</p><button id="retryAuth" hidden>TENTAR NOVAMENTE</button></div></section><div id="adminApp" class="admin-app" hidden><aside><div class="side-logo"><b>FERAS & FLORES</b><small>PAINEL DO ARQUIVO</small></div><nav id="nav"></nav><div class="side-bottom"><a href="index.html" target="_blank">SITE PÚBLICO ↗</a><button id="logout">SAIR</button></div></aside><section class="main"><header><button id="menuButton">☰</button><div><p class="tag">PAINEL ADMINISTRATIVO</p><h1 id="pageTitle">VISÃO GERAL</h1></div><div class="user"><b id="adminName">ADMIN</b><small id="adminEmail"></small></div></header><main id="content"></main></section></div><div id="overlay"></div><div id="editorModal" class="editor-modal" hidden><div class="editor-backdrop" data-close-editor></div><section><header><h2 id="editorTitle">EDITOR</h2><button data-close-editor>×</button></header><form id="editorForm"></form></section></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="admin.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width,initial-scale=1" name="viewport"/>
+  <meta content="noindex" name="robots"/>
+  <title>
+   Painel &mdash; Feras e Flores
+  </title>
+  <link href="admin.css" rel="stylesheet"/>
+ </head>
+ <body class="admin-page" data-page="admin">
+  <section class="auth-screen" id="authScreen">
+   <div>
+    <p class="tag">
+     CONTROLE DE ACESSO
+    </p>
+    <h1>
+     VERIFICANDO AUTORIZA&Ccedil;&Atilde;O
+    </h1>
+    <p id="authMessage">
+     Lendo sess&atilde;o...
+    </p>
+    <button hidden="" id="retryAuth" type="button">
+     TENTAR NOVAMENTE
+    </button>
+   </div>
+  </section>
+  <div class="admin-app" hidden="" id="adminApp">
+   <aside>
+    <div class="side-logo">
+     <b>
+      FERAS &amp; FLORES
+     </b>
+     <small>
+      PAINEL DO ARQUIVO
+     </small>
+    </div>
+    <nav id="nav">
+    </nav>
+    <div class="side-bottom">
+     <a href="index.html" target="_blank">
+      SITE P&Uacute;BLICO &nearrow;
+     </a>
+     <button id="logout" type="button">
+      SAIR
+     </button>
+    </div>
+   </aside>
+   <section class="main">
+    <header>
+     <button id="menuButton" type="button">
+      ☰
+     </button>
+     <div>
+      <p class="tag">
+       PAINEL ADMINISTRATIVO
+      </p>
+      <h1 id="pageTitle">
+       VIS&Atilde;O GERAL
+      </h1>
+     </div>
+     <div class="user">
+      <b id="adminName">
+       ADMIN
+      </b>
+      <small id="adminEmail">
+      </small>
+     </div>
+    </header>
+    <main id="content">
+    </main>
+   </section>
+  </div>
+  <div id="overlay">
+  </div>
+  <div class="editor-modal" hidden="" id="editorModal">
+   <div class="editor-backdrop" data-close-editor="">
+   </div>
+   <section>
+    <header>
+     <h2 id="editorTitle">
+      EDITOR
+     </h2>
+     <button data-close-editor="" type="button">
+      &times;
+     </button>
+    </header>
+    <form id="editorForm">
+    </form>
+   </section>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+  </script>
+  <script src="config.js">
+  </script>
+  <script src="admin.js">
+  </script>
+ </body>
+</html>

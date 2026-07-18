@@ -1,1 +1,55 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Canal — Feras e Flores</title><link rel="stylesheet" href="chat.css"></head><body><main id="chatShell" class="chat"><header><div><small>CANAL NÃO IDENTIFICADO</small><h1 id="speaker">Algo</h1></div><button id="resetChat" title="Apagar memória local">REINICIAR</button></header><section id="messages" class="messages"></section><div id="typing" class="typing" hidden>Algo está digitando...</div><form id="chatForm"><input id="chatInput" autocomplete="off" placeholder="Escreva uma mensagem..."><button>ENVIAR</button></form></main><div id="fxBlack" class="fx-black"></div><div id="fxHalf" class="fx-half"></div><div id="fxText" class="fx-text" hidden></div><div id="fxMedia" class="fx-media" hidden></div><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="effects.js"></script><script src="chat.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width,initial-scale=1" name="viewport"/>
+  <title>
+   Canal &mdash; Feras e Flores
+  </title>
+  <link href="chat.css" rel="stylesheet"/>
+ </head>
+ <body>
+  <main class="chat" id="chatShell">
+   <header>
+    <div>
+     <small>
+      CANAL N&Atilde;O IDENTIFICADO
+     </small>
+     <h1 id="speaker">
+      Algo
+     </h1>
+    </div>
+    <button id="resetChat" title="Apagar mem&oacute;ria local" type="button">
+     REINICIAR
+    </button>
+   </header>
+   <section class="messages" id="messages">
+   </section>
+   <div class="typing" hidden="" id="typing">
+    Algo est&aacute; digitando...
+   </div>
+   <form id="chatForm" novalidate="">
+    <input aria-label="Mensagem para Algo" autocomplete="off" id="chatInput" maxlength="500" placeholder="Escreva uma mensagem..."/>
+    <button type="submit">
+     ENVIAR
+    </button>
+   </form>
+  </main>
+  <div class="fx-black" id="fxBlack">
+  </div>
+  <div class="fx-half" id="fxHalf">
+  </div>
+  <div class="fx-text" hidden="" id="fxText">
+  </div>
+  <div class="fx-media" hidden="" id="fxMedia">
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+  </script>
+  <script src="config.js">
+  </script>
+  <script src="effects.js">
+  </script>
+  <script src="chat.js">
+  </script>
+ </body>
+</html>

@@ -1,1 +1,71 @@
-<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Acesso — Feras e Flores</title><link rel="stylesheet" href="admin.css"></head><body data-page="login" class="login-page"><main class="login-layout"><section class="poster"><a href="index.html"><b>FERAS & FLORES</b><small>ARQUIVO ADMINISTRATIVO</small></a><div><p class="tag">ÁREA RESTRITA</p><h1>O ARQUIVO NÃO<span>DEVERIA ESTAR ABERTO.</span></h1></div></section><section class="login-side"><div class="login-card"><a href="index.html">← VOLTAR</a><p class="tag">AUTENTICAÇÃO</p><h2>ENTRAR</h2><form id="loginForm" action="javascript:void(0)" method="post"><label>EMAIL</label><input id="email" type="email" autocomplete="email"><label>SENHA</label><input id="password" type="password" autocomplete="current-password"><div id="loginMessage" class="message" hidden></div><button id="loginButton">AUTENTICAR</button></form></div></section></main><script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script><script src="config.js"></script><script src="admin.js"></script></body></html>
+<!DOCTYPE html>
+<html lang="pt-BR">
+ <head>
+  <meta charset="utf-8"/>
+  <meta content="width=device-width,initial-scale=1" name="viewport"/>
+  <meta content="noindex" name="robots"/>
+  <title>
+   Acesso &mdash; Feras e Flores
+  </title>
+  <link href="admin.css" rel="stylesheet"/>
+ </head>
+ <body class="login-page" data-page="login">
+  <main class="login-layout">
+   <section class="poster">
+    <a href="index.html">
+     <b>
+      FERAS &amp; FLORES
+     </b>
+     <small>
+      ARQUIVO ADMINISTRATIVO
+     </small>
+    </a>
+    <div>
+     <p class="tag">
+      &Aacute;REA RESTRITA
+     </p>
+     <h1>
+      O ARQUIVO N&Atilde;O
+      <span>
+       DEVERIA ESTAR ABERTO.
+      </span>
+     </h1>
+    </div>
+   </section>
+   <section class="login-side">
+    <div class="login-card">
+     <a href="index.html">
+      &larr; VOLTAR
+     </a>
+     <p class="tag">
+      AUTENTICA&Ccedil;&Atilde;O
+     </p>
+     <h2>
+      ENTRAR
+     </h2>
+     <form action="javascript:void(0)" id="loginForm" method="post" novalidate="">
+      <label>
+       EMAIL
+      </label>
+      <input autocomplete="email" id="email" placeholder="conta@exemplo.com" required="" type="email"/>
+      <label>
+       SENHA
+      </label>
+      <input autocomplete="current-password" id="password" placeholder="Digite sua senha" required="" type="password"/>
+      <div class="message" hidden="" id="loginMessage">
+      </div>
+      <button id="loginButton" type="submit">
+       AUTENTICAR
+      </button>
+     </form>
+    </div>
+   </section>
+  </main>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2">
+  </script>
+  <script src="config.js">
+  </script>
+  <script src="admin.js">
+  </script>
+ </body>
+</html>
