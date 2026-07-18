@@ -158,26 +158,6 @@ body.shake {
 }
 
 
-.chat-header-actions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-}
-
-.chat-sound-toggle {
-  padding: 8px 10px;
-  border: 1px solid #ead9c455;
-  background: #21171f;
-  color: #ead9c4;
-  font-family: inherit;
-  font-size: 0.72rem;
-  font-weight: 700;
-}
-
-.chat-sound-toggle:hover {
-  background: #6d263e;
-}
-
 .sr-only {
   position: absolute;
   width: 1px;
@@ -186,4 +166,73 @@ body.shake {
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
   white-space: nowrap;
+}
+
+
+/* ==========================================================
+   ESCALADA DE IRRITAÇÃO
+   ========================================================== */
+
+.chat.is-locked {
+  pointer-events: none;
+  user-select: none;
+}
+
+.chat.is-locked .chat-form {
+  opacity: 0.32;
+  filter: grayscale(1);
+}
+
+body.irritation-warning::before {
+  content: "";
+
+  position: fixed;
+  inset: 0;
+  z-index: 6900;
+
+  pointer-events: none;
+
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0,
+      transparent 3px,
+      rgba(208, 93, 125, 0.08) 4px
+    );
+
+  animation: irritation-flicker 90ms steps(2) infinite;
+}
+
+body.irritation-critical {
+  animation:
+    g 0.07s infinite,
+    irritation-pulse 450ms ease-in-out infinite alternate;
+}
+
+body.irritation-disconnect {
+  overflow: hidden;
+}
+
+body.irritation-disconnect .chat {
+  filter:
+    contrast(1.8)
+    saturate(0.45)
+    brightness(0.55);
+}
+
+@keyframes irritation-flicker {
+  50% {
+    opacity: 0.25;
+    transform: translateX(2px);
+  }
+}
+
+@keyframes irritation-pulse {
+  from {
+    background-color: #080608;
+  }
+
+  to {
+    background-color: #2b0715;
+  }
 }

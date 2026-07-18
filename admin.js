@@ -170,6 +170,12 @@ const defs = {
       ["accepted_name_message", "Nome aceito", "text", 1],
       ["invalid_name_message", "Nome inválido", "text", 1],
       ["invalid_names", "Palavras rejeitadas", "array", 1],
+      [
+        "behavior_settings",
+        "Irritação e áudio de erro (JSON)",
+        "json",
+        1
+      ],
       ["status", "Status", "select:draft|active|archived"],
       ["__rules", "Regras do chat", "rules", 1],
     ],

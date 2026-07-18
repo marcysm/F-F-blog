@@ -30,7 +30,6 @@ async function initializeChat() {
     `ff-chat-${chatState.chatKey}-memory-v3`;
 
   configureChatForm();
-  configureSoundToggle();
 
   if (!chatState.client) {
     showFatalError(
@@ -40,16 +39,7 @@ async function initializeChat() {
   }
 
   try {
-    await window.FFAudio.loadSettings(
-      chatState.client,
-      "chat"
-    );
-
-    window.FFAudio
-      .startAmbient()
-      .catch(() => {});
-
-    const playerToken = getOrCreatePlayerToken();
+const playerToken = getOrCreatePlayerToken();
 
     const remoteData = await loadRemoteChatState(
       playerToken,
@@ -120,11 +110,7 @@ function mapChatElements() {
 
   chatElements.sendButton =
     document.getElementById("chat-send-button");
-
-  chatElements.soundToggle =
-    document.getElementById("chat-sound-toggle");
-
-  chatElements.error =
+chatElements.error =
     document.getElementById("chat-error");
 
   chatElements.errorMessage =
@@ -203,7 +189,8 @@ function createFreshMemory() {
     opened: false,
     asked_name: false,
     awaiting_name: false,
-    ask_name_at: null
+    ask_name_at: null,
+    irritation_events: {}
   };
 }
 
@@ -257,6 +244,11 @@ function mergeMemories(
   merged.rule_uses = {
     ...(localMemory?.rule_uses || {}),
     ...(remoteMemory?.rule_uses || {})
+  };
+
+  merged.irritation_events = {
+    ...(localMemory?.irritation_events || {}),
+    ...(remoteMemory?.irritation_events || {})
   };
 
   const serverHistory = Array.isArray(remoteHistory)
@@ -340,7 +332,11 @@ function normalizeRemoteState(remoteState) {
     opened:
       remoteState.opened ??
       stateData.opened ??
-      false
+      false,
+
+    irritation_events:
+      stateData.irritation_events ||
+      {}
   };
 }
 
@@ -546,6 +542,13 @@ async function handlePlayerMessage(event) {
   chatState.isSending = true;
   setInputEnabled(false);
 
+  window.FFEffects
+    ?.unlockAudio()
+    .catch(() => {});
+
+  const irritationBefore =
+    Number(chatState.memory.irritation || 0);
+
   try {
     chatElements.input.value = "";
 
@@ -589,6 +592,11 @@ async function handlePlayerMessage(event) {
     for (const action of data?.actions || []) {
       await executeChatAction(action);
     }
+
+    await runIrritationEscalation(
+      irritationBefore,
+      Number(chatState.memory.irritation || 0)
+    );
 
     await persistMemory();
   } catch (error) {
@@ -813,40 +821,6 @@ async function executeChatAction(action) {
   }
 }
 
-function configureSoundToggle() {
-  updateChatSoundButton();
-
-  chatElements.soundToggle?.addEventListener(
-    "click",
-    () => {
-      const enabled =
-        !window.FFAudio.isEnabled();
-
-      window.FFAudio.setEnabled(enabled);
-
-      updateChatSoundButton();
-    }
-  );
-
-  window.addEventListener(
-    "ff-sound-change",
-    updateChatSoundButton
-  );
-}
-
-function updateChatSoundButton() {
-  if (!chatElements.soundToggle) {
-    return;
-  }
-
-  chatElements.soundToggle.textContent =
-    `SOM: ${
-      window.FFAudio?.isEnabled()
-        ? "LIGADO"
-        : "DESLIGADO"
-    }`;
-}
-
 function applyMessageVariables(text) {
   const messageCounts =
     chatState.memory?.message_counts || {};
@@ -897,6 +871,254 @@ function applyMessageVariables(text) {
   }
 
   return result;
+}
+
+/* ==========================================================
+   ESCALADA DE IRRITAÇÃO
+   O áudio do chat ignora a preferência de som do site.
+   Ele só toca durante falhas e glitches.
+   ========================================================== */
+
+function getIrritationSettings() {
+  return {
+    warning_irritation: 3,
+    critical_irritation: 5,
+    close_irritation: 7,
+
+    warning_duration_ms: 2800,
+    critical_duration_ms: 4700,
+    close_duration_ms: 6500,
+
+    close_target_url: "index.html",
+    error_audio_url: "",
+
+    ...(
+      chatState.config?.behavior_settings ||
+      {}
+    )
+  };
+}
+
+async function runIrritationEscalation(
+  previousIrritation,
+  currentIrritation
+) {
+  if (currentIrritation <= previousIrritation) {
+    return;
+  }
+
+  const settings =
+    getIrritationSettings();
+
+  chatState.memory.irritation_events =
+    chatState.memory.irritation_events || {};
+
+  if (
+    currentIrritation >=
+      Number(settings.close_irritation) &&
+    !chatState.memory.irritation_events.closed
+  ) {
+    chatState.memory.irritation_events.closed = true;
+
+    await persistMemory();
+
+    await runChatFailure({
+      level: "disconnect",
+      duration:
+        Number(settings.close_duration_ms),
+      message:
+        "CONEXÃO ENCERRADA.",
+      settings
+    });
+
+    window.location.replace(
+      settings.close_target_url ||
+      "index.html"
+    );
+
+    return;
+  }
+
+  if (
+    currentIrritation >=
+      Number(settings.critical_irritation) &&
+    !chatState.memory.irritation_events.critical
+  ) {
+    chatState.memory.irritation_events.critical = true;
+
+    await persistMemory();
+
+    await runChatFailure({
+      level: "critical",
+      duration:
+        Number(settings.critical_duration_ms),
+      message:
+        "ALGO PAROU DE RESPONDER.",
+      settings
+    });
+
+    return;
+  }
+
+  if (
+    currentIrritation >=
+      Number(settings.warning_irritation) &&
+    !chatState.memory.irritation_events.warning
+  ) {
+    chatState.memory.irritation_events.warning = true;
+
+    await persistMemory();
+
+    await runChatFailure({
+      level: "warning",
+      duration:
+        Number(settings.warning_duration_ms),
+      message: "",
+      settings
+    });
+  }
+}
+
+async function runChatFailure({
+  level,
+  duration,
+  message,
+  settings
+}) {
+  const shell =
+    chatElements.shell;
+
+  const fxText =
+    document.getElementById("fxText");
+
+  const fxBlack =
+    document.getElementById("fxBlack");
+
+  shell?.classList.add("is-locked");
+
+  document.body.classList.add(
+    "irritation-warning"
+  );
+
+  if (
+    level === "critical" ||
+    level === "disconnect"
+  ) {
+    document.body.classList.add(
+      "irritation-critical"
+    );
+  }
+
+  if (level === "disconnect") {
+    document.body.classList.add(
+      "irritation-disconnect"
+    );
+
+    fxBlack?.classList.add("on");
+  }
+
+  if (message && fxText) {
+    fxText.textContent = message;
+    fxText.hidden = false;
+  }
+
+  const audioPromise =
+    playForcedChatErrorSound(
+      settings,
+      duration,
+      level
+    );
+
+  await Promise.all([
+    audioPromise,
+    wait(duration)
+  ]);
+
+  if (message && fxText) {
+    fxText.hidden = true;
+    fxText.textContent = "";
+  }
+
+  fxBlack?.classList.remove("on");
+
+  document.body.classList.remove(
+    "irritation-warning",
+    "irritation-critical"
+  );
+
+  if (level !== "disconnect") {
+    shell?.classList.remove("is-locked");
+  }
+}
+
+async function playForcedChatErrorSound(
+  settings,
+  duration,
+  level
+) {
+  const customAudio =
+    String(
+      settings.error_audio_url || ""
+    ).trim();
+
+  if (customAudio) {
+    window.FFEffects.play(
+      customAudio,
+      {
+        force_audio: true,
+        volume:
+          Number(
+            settings.error_audio_volume ??
+            0.72
+          )
+      }
+    );
+
+    await wait(duration);
+    return;
+  }
+
+  const toneSettings = {
+    force_audio: true,
+
+    start_frequency:
+      level === "warning"
+        ? 74
+        : 63,
+
+    end_frequency:
+      level === "disconnect"
+        ? 19
+        : 27,
+
+    volume:
+      level === "warning"
+        ? 0.18
+        : 0.27,
+
+    wave_type: "sawtooth",
+    sub_wave_type: "square",
+
+    attack_ms: 180,
+    release_ms:
+      Math.max(1400, duration * 0.55),
+
+    filter_frequency:
+      level === "warning"
+        ? 260
+        : 180,
+
+    filter_q: 5,
+    distortion:
+      level === "warning"
+        ? 38
+        : 58
+  };
+
+  await window.FFEffects.generatedTone(
+    toneSettings,
+    duration
+  );
 }
 
 /* ==========================================================

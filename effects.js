@@ -229,7 +229,32 @@ window.FFAudio = {
 
 window.FFEffects = {
   audio: null,
+  audioContext: null,
   generatedNodes: new Set(),
+
+  async unlockAudio() {
+    const AudioContextClass =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    if (!AudioContextClass) {
+      return null;
+    }
+
+    if (
+      !this.audioContext ||
+      this.audioContext.state === "closed"
+    ) {
+      this.audioContext =
+        new AudioContextClass();
+    }
+
+    if (this.audioContext.state === "suspended") {
+      await this.audioContext.resume();
+    }
+
+    return this.audioContext;
+  },
 
   wait(milliseconds) {
     return new Promise((resolve) => {
@@ -390,9 +415,15 @@ window.FFEffects = {
   },
 
   play(url, settings = {}) {
+    const forceAudio =
+      settings.force_audio === true;
+
     if (
       !url ||
-      !window.FFAudio?.isEnabled()
+      (
+        !forceAudio &&
+        !window.FFAudio?.isEnabled()
+      )
     ) {
       return;
     }
@@ -418,21 +449,22 @@ window.FFEffects = {
   },
 
   async generatedTone(settings = {}, duration = 1800) {
-    if (!window.FFAudio?.isEnabled()) {
+    const forceAudio =
+      settings.force_audio === true;
+
+    if (
+      !forceAudio &&
+      !window.FFAudio?.isEnabled()
+    ) {
       return;
     }
 
-    const AudioContextClass =
-      window.AudioContext ||
-      window.webkitAudioContext;
+    const context =
+      await this.unlockAudio();
 
-    if (!AudioContextClass) {
+    if (!context) {
       return;
     }
-
-    const context = new AudioContextClass();
-
-    await context.resume();
 
     const now = context.currentTime;
     const seconds =
@@ -548,8 +580,6 @@ window.FFEffects = {
 
     await this.wait(duration + 80);
 
-    await context.close().catch(() => {});
-
     this.generatedNodes.delete(context);
   },
 
@@ -557,11 +587,14 @@ window.FFEffects = {
     this.audio?.pause();
     this.audio = null;
 
-    for (const context of this.generatedNodes) {
-      context.close().catch(() => {});
-    }
-
     this.generatedNodes.clear();
+
+    if (
+      this.audioContext &&
+      this.audioContext.state === "running"
+    ) {
+      this.audioContext.suspend().catch(() => {});
+    }
   },
 
   clear() {
