@@ -573,73 +573,119 @@ async function mediaView() {
       (b) => (b.onclick = () => deleteMedia(b.dataset.mdel, b.dataset.path)),
     );
 }
+
 async function upload() {
-  const f = mediaFile.files[0];
-  if (!f) return alert("Escolha um arquivo.");
-  const folder = slug(mediaFolder.value || "geral"),
-    path = `${folder}/${Date.now()}-${slug(f.name)}`;
-  const { error } = await A.client.storage
-    .from(FF_STORAGE_BUCKET)
-    .upload(path, f);
-  if (error) return alert(error.message);
-  const { data: u } = A.client.storage
-    .from(FF_STORAGE_BUCKET)
-    .getPublicUrl(path);
-  const type = f.type.startsWith("image/")
-    ? "image"
-    : f.type.startsWith("audio/")
-      ? "audio"
-      : f.type.startsWith("video/")
-        ? "video"
-        : f.type === "application/pdf"
-          ? "document"
-          : "other";
-  const { error: e } = await A.client
-    .from("blog_media")
-    .insert({
-      title: f.name,
-      file_name: f.name,
-      storage_path: path,
-      public_url: u.publicUrl,
-      media_type: type,
-      mime_type: f.type,
-      file_size: f.size,
-      folder,
-      uploaded_by: A.user.id,
-    });
-  if (e) alert(e.message);
-  else mediaView();
-}
-async function deleteMedia(id, path) {
-  if (!confirm("Excluir mídia?")) return;
-  await A.client.storage.from(FF_STORAGE_BUCKET).remove([path]);
-  await A.client.from("blog_media").delete().eq("id", id);
+  const fileInput = document.getElementById("mediaFile");
+  const folderInput = document.getElementById("mediaFolder");
+
+  const file = fileInput?.files?.[0];
+
+  if (!file) {
+    alert("Escolha um arquivo.");
+    return;
+  }
+
+  const extension =
+    file.name
+      .split(".")
+      .pop()
+      ?.toLowerCase() || "";
+
+  const correctedMimeTypes = {
+    mp3: "audio/mpeg",
+    mpeg: "audio/mpeg",
+    ogg: "audio/ogg",
+    oga: "audio/ogg",
+    wav: "audio/wav",
+    m4a: "audio/mp4",
+    aac: "audio/aac",
+    png: "image/png",
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    webp: "image/webp",
+    gif: "image/gif",
+    mp4: "video/mp4",
+    webm: "video/webm",
+    pdf: "application/pdf"
+  };
+
+  const correctedMimeType =
+    correctedMimeTypes[extension] ||
+    file.type ||
+    "application/octet-stream";
+
+  const folder =
+    slug(folderInput?.value || "geral");
+
+  const safeFileName =
+    slug(
+      file.name.replace(
+        /\.[^.]+$/,
+        ""
+      )
+    );
+
+  const path =
+    `${folder}/${Date.now()}-${safeFileName}.${extension}`;
+
+  const { error: uploadError } =
+    await A.client.storage
+      .from(FF_STORAGE_BUCKET)
+      .upload(
+        path,
+        file,
+        {
+          contentType: correctedMimeType,
+          upsert: false
+        }
+      );
+
+  if (uploadError) {
+    alert(uploadError.message);
+    return;
+  }
+
+  const { data: publicData } =
+    A.client.storage
+      .from(FF_STORAGE_BUCKET)
+      .getPublicUrl(path);
+
+  const mediaType =
+    correctedMimeType.startsWith("image/")
+      ? "image"
+      : correctedMimeType.startsWith("audio/")
+        ? "audio"
+        : correctedMimeType.startsWith("video/")
+          ? "video"
+          : correctedMimeType === "application/pdf"
+            ? "document"
+            : "other";
+
+  const { error: databaseError } =
+    await A.client
+      .from("blog_media")
+      .insert({
+        title: file.name,
+        file_name: file.name,
+        storage_path: path,
+        public_url:
+          publicData.publicUrl,
+        media_type: mediaType,
+        mime_type:
+          correctedMimeType,
+        file_size: file.size,
+        folder,
+        uploaded_by: A.user.id
+      });
+
+  if (databaseError) {
+    alert(databaseError.message);
+    return;
+  }
+
   mediaView();
 }
-let stepData = [];
-async function loadSteps(eventId) {
-  stepData = [];
-  if (eventId) {
-    const { data } = await A.client
-      .from("blog_event_steps")
-      .select("*")
-      .eq("event_id", eventId)
-      .order("step_order");
-    stepData = data || [];
-  }
-  renderSteps();
-  addStep.onclick = () => {
-    stepData.push({
-      action_type: "delay",
-      duration_ms: 1000,
-      delay_before_ms: 0,
-      text_content: "",
-      media_url: "",
-      target_url: "",
-    });
-    renderSteps();
-  };
-}
+
 function renderSteps() {
   if (!window.stepList) return;
   stepList.innerHTML = stepData
