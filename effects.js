@@ -1,260 +1,243 @@
 "use strict";
 
 /* ==========================================================
-   FERAS E FLORES — MOTOR DE EFEITOS E ÁUDIO
+   FERAS E FLORES — ÁUDIO, PROGRESSÃO E EFEITOS
    ========================================================== */
+
+const FF_AUDIO_STORAGE_KEY = "ff-sound";
+const FF_AUDIO_CONTEXTS = new Map();
+
+window.FFAudio = {
+  contextName: "site",
+  settings: null,
+  ambientAudio: null,
+  fadeTimer: null,
+  started: false,
+  interactionBound: false,
+
+  isEnabled() {
+    return localStorage.getItem(FF_AUDIO_STORAGE_KEY) !== "off";
+  },
+
+  setEnabled(enabled) {
+    localStorage.setItem(
+      FF_AUDIO_STORAGE_KEY,
+      enabled ? "on" : "off"
+    );
+
+    if (enabled) {
+      this.startAmbient().catch(() => {});
+    } else {
+      this.stopAmbient();
+      window.FFEffects?.stopAllAudio();
+    }
+
+    window.dispatchEvent(
+      new CustomEvent("ff-sound-change", {
+        detail: { enabled }
+      })
+    );
+  },
+
+  async loadSettings(client, contextName = "site") {
+    this.contextName = contextName;
+
+    if (!client) {
+      return null;
+    }
+
+    const { data, error } = await client
+      .from("blog_settings")
+      .select("setting_value")
+      .eq("setting_key", "audio")
+      .eq("is_public", true)
+      .maybeSingle();
+
+    if (error) {
+      console.warn("Áudio do site não carregado:", error);
+      return null;
+    }
+
+    this.settings = {
+      enabled: true,
+      ambient_url: "",
+      volume: 0.18,
+      loop: true,
+      fade_in_ms: 2500,
+      fade_out_ms: 900,
+      play_on_site: true,
+      play_on_chat: true,
+      play_on_secret: true,
+      ...data?.setting_value
+    };
+
+    this.bindFirstInteraction();
+
+    return this.settings;
+  },
+
+  shouldPlayHere() {
+    if (!this.settings?.enabled || !this.isEnabled()) {
+      return false;
+    }
+
+    const field = {
+      site: "play_on_site",
+      chat: "play_on_chat",
+      secret: "play_on_secret"
+    }[this.contextName] || "play_on_site";
+
+    return this.settings[field] !== false;
+  },
+
+  bindFirstInteraction() {
+    if (this.interactionBound) {
+      return;
+    }
+
+    this.interactionBound = true;
+
+    const start = () => {
+      this.startAmbient().catch(() => {});
+
+      ["pointerdown", "keydown", "touchstart"].forEach((eventName) => {
+        document.removeEventListener(eventName, start);
+      });
+    };
+
+    ["pointerdown", "keydown", "touchstart"].forEach((eventName) => {
+      document.addEventListener(eventName, start, {
+        once: true,
+        passive: true
+      });
+    });
+  },
+
+  async startAmbient() {
+    if (
+      !this.shouldPlayHere() ||
+      !this.settings?.ambient_url
+    ) {
+      return;
+    }
+
+    if (
+      this.ambientAudio &&
+      this.ambientAudio.src ===
+        new URL(this.settings.ambient_url, location.href).href
+    ) {
+      if (this.ambientAudio.paused) {
+        await this.ambientAudio.play();
+      }
+
+      this.fadeTo(
+        Number(this.settings.volume ?? 0.18),
+        Number(this.settings.fade_in_ms ?? 2500)
+      );
+
+      this.started = true;
+      return;
+    }
+
+    this.stopAmbient(true);
+
+    const audio = new Audio(this.settings.ambient_url);
+
+    audio.loop = this.settings.loop !== false;
+    audio.preload = "auto";
+    audio.volume = 0;
+
+    this.ambientAudio = audio;
+
+    await audio.play();
+
+    this.fadeTo(
+      Number(this.settings.volume ?? 0.18),
+      Number(this.settings.fade_in_ms ?? 2500)
+    );
+
+    this.started = true;
+  },
+
+  stopAmbient(immediate = false) {
+    if (!this.ambientAudio) {
+      return;
+    }
+
+    if (immediate) {
+      this.ambientAudio.pause();
+      this.ambientAudio.currentTime = 0;
+      this.ambientAudio = null;
+      return;
+    }
+
+    const audio = this.ambientAudio;
+    const duration = Number(
+      this.settings?.fade_out_ms ?? 900
+    );
+
+    this.fadeTo(0, duration, () => {
+      audio.pause();
+      audio.currentTime = 0;
+
+      if (this.ambientAudio === audio) {
+        this.ambientAudio = null;
+      }
+    });
+  },
+
+  fadeTo(targetVolume, duration, done = null) {
+    if (!this.ambientAudio) {
+      done?.();
+      return;
+    }
+
+    clearInterval(this.fadeTimer);
+
+    const audio = this.ambientAudio;
+    const startVolume = audio.volume;
+    const safeTarget = Math.min(
+      1,
+      Math.max(0, Number(targetVolume || 0))
+    );
+
+    const startedAt = performance.now();
+
+    if (duration <= 0) {
+      audio.volume = safeTarget;
+      done?.();
+      return;
+    }
+
+    this.fadeTimer = window.setInterval(() => {
+      const progress = Math.min(
+        1,
+        (performance.now() - startedAt) / duration
+      );
+
+      audio.volume =
+        startVolume +
+        (safeTarget - startVolume) * progress;
+
+      if (progress >= 1) {
+        clearInterval(this.fadeTimer);
+        done?.();
+      }
+    }, 40);
+  }
+};
 
 window.FFEffects = {
   audio: null,
-  audioContext: null,
-  audioUnlocked: false,
+  generatedNodes: new Set(),
 
   wait(milliseconds) {
     return new Promise((resolve) => {
-      window.setTimeout(
+      setTimeout(
         resolve,
         Math.max(0, Number(milliseconds || 0))
       );
     });
-  },
-
-  async unlockAudio() {
-    try {
-      if (!this.audioContext) {
-        const AudioContextClass =
-          window.AudioContext ||
-          window.webkitAudioContext;
-
-        if (AudioContextClass) {
-          this.audioContext =
-            new AudioContextClass();
-        }
-      }
-
-      if (
-        this.audioContext &&
-        this.audioContext.state === "suspended"
-      ) {
-        await this.audioContext.resume();
-      }
-
-      if (this.audioContext) {
-        const oscillator =
-          this.audioContext.createOscillator();
-
-        const gain =
-          this.audioContext.createGain();
-
-        gain.gain.value = 0.00001;
-
-        oscillator.connect(gain);
-        gain.connect(this.audioContext.destination);
-
-        oscillator.start();
-        oscillator.stop(
-          this.audioContext.currentTime + 0.02
-        );
-      }
-
-      this.audioUnlocked = true;
-      return true;
-    } catch (error) {
-      console.warn(
-        "Não foi possível liberar o áudio:",
-        error
-      );
-
-      return false;
-    }
-  },
-
-  async play(url, options = {}) {
-    if (
-      !url ||
-      window.localStorage.getItem("ff-sound") === "off"
-    ) {
-      return false;
-    }
-
-    await this.unlockAudio();
-
-    try {
-      if (this.audio) {
-        this.audio.pause();
-        this.audio.currentTime = 0;
-      }
-
-      const audio = new Audio(url);
-
-      audio.volume = Math.min(
-        Math.max(Number(options.volume ?? 0.7), 0),
-        1
-      );
-
-      this.audio = audio;
-
-      await audio.play();
-
-      return true;
-    } catch (error) {
-      console.warn(
-        "O navegador não conseguiu reproduzir o áudio:",
-        error
-      );
-
-      return false;
-    }
-  },
-
-  async generatedTone({
-    frequency = 440,
-    duration = 500,
-    volume = 0.2,
-    type = "sine"
-  } = {}) {
-    if (
-      window.localStorage.getItem("ff-sound") === "off"
-    ) {
-      return;
-    }
-
-    await this.unlockAudio();
-
-    if (!this.audioContext) {
-      return;
-    }
-
-    const context = this.audioContext;
-
-    const oscillator =
-      context.createOscillator();
-
-    const gain =
-      context.createGain();
-
-    oscillator.type = type;
-
-    oscillator.frequency.setValueAtTime(
-      frequency,
-      context.currentTime
-    );
-
-    gain.gain.setValueAtTime(
-      0.0001,
-      context.currentTime
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-      Math.max(0.001, volume),
-      context.currentTime + 0.02
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-      0.0001,
-      context.currentTime +
-        Math.max(0.05, duration / 1000)
-    );
-
-    oscillator.connect(gain);
-    gain.connect(context.destination);
-
-    oscillator.start();
-
-    oscillator.stop(
-      context.currentTime +
-        Math.max(0.08, duration / 1000) +
-        0.05
-    );
-
-    await this.wait(duration);
-  },
-
-  async playShriek(duration = 1350) {
-    if (
-      window.localStorage.getItem("ff-sound") === "off"
-    ) {
-      return;
-    }
-
-    await this.unlockAudio();
-
-    if (!this.audioContext) {
-      return;
-    }
-
-    const context = this.audioContext;
-
-    const oscillatorA =
-      context.createOscillator();
-
-    const oscillatorB =
-      context.createOscillator();
-
-    const gain =
-      context.createGain();
-
-    const filter =
-      context.createBiquadFilter();
-
-    oscillatorA.type = "sawtooth";
-    oscillatorB.type = "square";
-
-    oscillatorA.frequency.setValueAtTime(
-      220,
-      context.currentTime
-    );
-
-    oscillatorA.frequency.exponentialRampToValueAtTime(
-      2400,
-      context.currentTime + duration / 1000
-    );
-
-    oscillatorB.frequency.setValueAtTime(
-      1700,
-      context.currentTime
-    );
-
-    oscillatorB.frequency.exponentialRampToValueAtTime(
-      350,
-      context.currentTime + duration / 1000
-    );
-
-    filter.type = "bandpass";
-    filter.frequency.value = 1600;
-    filter.Q.value = 7;
-
-    gain.gain.setValueAtTime(
-      0.0001,
-      context.currentTime
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-      0.25,
-      context.currentTime + 0.04
-    );
-
-    gain.gain.exponentialRampToValueAtTime(
-      0.0001,
-      context.currentTime + duration / 1000
-    );
-
-    oscillatorA.connect(filter);
-    oscillatorB.connect(filter);
-    filter.connect(gain);
-    gain.connect(context.destination);
-
-    oscillatorA.start();
-    oscillatorB.start();
-
-    oscillatorA.stop(
-      context.currentTime + duration / 1000 + 0.05
-    );
-
-    oscillatorB.stop(
-      context.currentTime + duration / 1000 + 0.05
-    );
-
-    await this.wait(duration);
   },
 
   async runEvent(event) {
@@ -294,20 +277,15 @@ window.FFEffects = {
     const duration =
       Number(step.duration_ms || 1000);
 
-    const body =
-      document.body;
-
+    const body = document.body;
     const black =
-      document.getElementById("fxBlack");
-
+      document.querySelector("#fxBlack");
     const half =
-      document.getElementById("fxHalf");
-
+      document.querySelector("#fxHalf");
     const text =
-      document.getElementById("fxText");
-
+      document.querySelector("#fxText");
     const media =
-      document.getElementById("fxMedia");
+      document.querySelector("#fxMedia");
 
     switch (step.action_type) {
       case "delay":
@@ -330,6 +308,14 @@ window.FFEffects = {
         black?.classList.add("on");
         await this.wait(duration);
         black?.classList.remove("on");
+        break;
+
+      case "flash":
+        black?.classList.add("on", "flash");
+        await this.wait(
+          Math.min(duration, 220)
+        );
+        black?.classList.remove("on", "flash");
         break;
 
       case "darken_left":
@@ -361,17 +347,13 @@ window.FFEffects = {
 
       case "show_image":
         if (media) {
-          media.replaceChildren();
-
           const image =
             document.createElement("img");
 
-          image.src =
-            step.media_url || "";
-
+          image.src = step.media_url || "";
           image.alt = "";
 
-          media.appendChild(image);
+          media.replaceChildren(image);
           media.hidden = false;
 
           await this.wait(duration);
@@ -382,41 +364,22 @@ window.FFEffects = {
         break;
 
       case "play_audio":
-        await this.play(
-          step.media_url,
-          {
-            volume:
-              step.settings?.volume ?? 0.7
-          }
-        );
-
+        this.play(step.media_url, step.settings);
         if (duration > 0) {
           await this.wait(duration);
         }
         break;
 
       case "generated_tone":
-        await this.generatedTone({
-          frequency:
-            step.settings?.frequency ?? 440,
-
-          duration,
-
-          volume:
-            step.settings?.volume ?? 0.2,
-
-          type:
-            step.settings?.wave_type ?? "sine"
-        });
-        break;
-
-      case "shriek":
-        await this.playShriek(duration);
+        await this.generatedTone(
+          step.settings || {},
+          duration
+        );
         break;
 
       case "redirect":
         if (step.target_url) {
-          window.location.assign(step.target_url);
+          location.assign(step.target_url);
         }
         break;
 
@@ -426,6 +389,181 @@ window.FFEffects = {
     }
   },
 
+  play(url, settings = {}) {
+    if (
+      !url ||
+      !window.FFAudio?.isEnabled()
+    ) {
+      return;
+    }
+
+    this.audio?.pause();
+
+    this.audio = new Audio(url);
+
+    this.audio.volume = Math.min(
+      1,
+      Math.max(
+        0,
+        Number(settings.volume ?? 0.7)
+      )
+    );
+
+    this.audio.play().catch((error) => {
+      console.warn(
+        "Áudio bloqueado pelo navegador:",
+        error
+      );
+    });
+  },
+
+  async generatedTone(settings = {}, duration = 1800) {
+    if (!window.FFAudio?.isEnabled()) {
+      return;
+    }
+
+    const AudioContextClass =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    if (!AudioContextClass) {
+      return;
+    }
+
+    const context = new AudioContextClass();
+
+    await context.resume();
+
+    const now = context.currentTime;
+    const seconds =
+      Math.max(0.08, duration / 1000);
+
+    const startFrequency = Number(
+      settings.start_frequency ??
+      settings.frequency ??
+      62
+    );
+
+    const endFrequency = Number(
+      settings.end_frequency ??
+      34
+    );
+
+    const volume = Math.min(
+      0.6,
+      Math.max(
+        0.001,
+        Number(settings.volume ?? 0.18)
+      )
+    );
+
+    const attack = Math.min(
+      seconds * 0.45,
+      Number(settings.attack_ms ?? 240) / 1000
+    );
+
+    const release = Math.min(
+      seconds * 0.75,
+      Number(settings.release_ms ?? 1000) / 1000
+    );
+
+    const oscillator = context.createOscillator();
+    const subOscillator = context.createOscillator();
+    const gain = context.createGain();
+    const filter = context.createBiquadFilter();
+    const distortion = context.createWaveShaper();
+
+    oscillator.type =
+      settings.wave_type || "sawtooth";
+
+    subOscillator.type =
+      settings.sub_wave_type || "sine";
+
+    oscillator.frequency.setValueAtTime(
+      startFrequency,
+      now
+    );
+
+    oscillator.frequency.exponentialRampToValueAtTime(
+      Math.max(1, endFrequency),
+      now + seconds
+    );
+
+    subOscillator.frequency.setValueAtTime(
+      Math.max(1, startFrequency / 2),
+      now
+    );
+
+    subOscillator.frequency.exponentialRampToValueAtTime(
+      Math.max(1, endFrequency / 2),
+      now + seconds
+    );
+
+    filter.type = "lowpass";
+    filter.frequency.setValueAtTime(
+      Number(settings.filter_frequency ?? 240),
+      now
+    );
+
+    filter.Q.value =
+      Number(settings.filter_q ?? 3);
+
+    distortion.curve = createDistortionCurve(
+      Number(settings.distortion ?? 28)
+    );
+
+    gain.gain.setValueAtTime(0.0001, now);
+
+    gain.gain.exponentialRampToValueAtTime(
+      volume,
+      now + Math.max(0.01, attack)
+    );
+
+    gain.gain.setValueAtTime(
+      volume,
+      Math.max(
+        now + attack,
+        now + seconds - release
+      )
+    );
+
+    gain.gain.exponentialRampToValueAtTime(
+      0.0001,
+      now + seconds
+    );
+
+    oscillator.connect(distortion);
+    subOscillator.connect(distortion);
+    distortion.connect(filter);
+    filter.connect(gain);
+    gain.connect(context.destination);
+
+    oscillator.start(now);
+    subOscillator.start(now);
+
+    oscillator.stop(now + seconds);
+    subOscillator.stop(now + seconds);
+
+    this.generatedNodes.add(context);
+
+    await this.wait(duration + 80);
+
+    await context.close().catch(() => {});
+
+    this.generatedNodes.delete(context);
+  },
+
+  stopAllAudio() {
+    this.audio?.pause();
+    this.audio = null;
+
+    for (const context of this.generatedNodes) {
+      context.close().catch(() => {});
+    }
+
+    this.generatedNodes.clear();
+  },
+
   clear() {
     document.body.classList.remove(
       "glitch",
@@ -433,23 +571,23 @@ window.FFEffects = {
     );
 
     document
-      .getElementById("fxBlack")
-      ?.classList.remove("on");
+      .querySelector("#fxBlack")
+      ?.classList.remove("on", "flash");
 
     document
-      .getElementById("fxHalf")
+      .querySelector("#fxHalf")
       ?.classList.remove("on", "right");
 
     const text =
-      document.getElementById("fxText");
+      document.querySelector("#fxText");
+
+    const media =
+      document.querySelector("#fxMedia");
 
     if (text) {
       text.hidden = true;
       text.textContent = "";
     }
-
-    const media =
-      document.getElementById("fxMedia");
 
     if (media) {
       media.hidden = true;
@@ -458,10 +596,31 @@ window.FFEffects = {
   }
 };
 
+function createDistortionCurve(amount = 20) {
+  const samples = 44100;
+  const curve = new Float32Array(samples);
+  const degree = Math.PI / 180;
 
-/* ==========================================================
-   PROGRESSO GERAL DO ARG
-   ========================================================== */
+  for (let index = 0; index < samples; index += 1) {
+    const value =
+      index * 2 / samples - 1;
+
+    curve[index] =
+      (
+        (3 + amount) *
+        value *
+        20 *
+        degree
+      ) /
+      (
+        Math.PI +
+        amount *
+        Math.abs(value)
+      );
+  }
+
+  return curve;
+}
 
 window.FFProgress = {
   key: "ff-arg-progress-v2",
@@ -470,7 +629,7 @@ window.FFProgress = {
     try {
       return (
         JSON.parse(
-          window.localStorage.getItem(this.key)
+          localStorage.getItem(this.key)
         ) ||
         this.fresh()
       );
@@ -482,7 +641,7 @@ window.FFProgress = {
   fresh() {
     return {
       player_token:
-        window.crypto?.randomUUID?.() ||
+        crypto.randomUUID?.() ||
         String(Date.now()),
 
       flags: [],
@@ -493,7 +652,7 @@ window.FFProgress = {
   },
 
   save(value) {
-    window.localStorage.setItem(
+    localStorage.setItem(
       this.key,
       JSON.stringify(value)
     );
@@ -514,34 +673,3 @@ window.FFProgress = {
     return state;
   }
 };
-
-
-/* ==========================================================
-   LIBERAÇÃO DE ÁUDIO POR INTERAÇÃO
-   ========================================================== */
-
-const unlockAudioOnce = async () => {
-  await window.FFEffects.unlockAudio();
-
-  document.removeEventListener(
-    "pointerdown",
-    unlockAudioOnce
-  );
-
-  document.removeEventListener(
-    "keydown",
-    unlockAudioOnce
-  );
-};
-
-document.addEventListener(
-  "pointerdown",
-  unlockAudioOnce,
-  { once: true }
-);
-
-document.addEventListener(
-  "keydown",
-  unlockAudioOnce,
-  { once: true }
-);

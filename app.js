@@ -1,119 +1,433 @@
 "use strict";
+
+/* ==========================================================
+   FERAS E FLORES — PÁGINA PÚBLICA
+   ========================================================== */
+
 const client = window.ferasFloresSupabase;
-let sound = localStorage.getItem("ff-sound") !== "off";
-document.addEventListener("DOMContentLoaded", init);
-async function init() {
-  setInterval(
-    () => (clock.textContent = new Date().toLocaleTimeString("pt-BR")),
-    1000,
-  );
-  clock.textContent = new Date().toLocaleTimeString("pt-BR");
-  soundToggle.textContent = `SOM: ${sound ? "LIGADO" : "DESLIGADO"}`;
-  soundToggle.onclick = () => {
-    sound = !sound;
-    localStorage.setItem("ff-sound", sound ? "on" : "off");
-    soundToggle.textContent = `SOM: ${sound ? "LIGADO" : "DESLIGADO"}`;
-  };
-  searchForm.onsubmit = search;
-  document
-    .querySelectorAll("[data-close]")
-    .forEach((x) => (x.onclick = () => (modal.hidden = true)));
-  await Promise.allSettled([loadSettings(), loadPosts()]);
+
+let sound =
+  window.FFAudio?.isEnabled() ?? true;
+
+const elements = {};
+
+document.addEventListener(
+  "DOMContentLoaded",
+  initializePublicPage
+);
+
+async function initializePublicPage() {
+  mapElements();
+  configureClock();
+  configureSoundButton();
+  configureSearch();
+  configureModal();
+
+  if (!client) {
+    showSearchStatus(
+      "O arquivo está desconectado."
+    );
+    return;
+  }
+
+  await Promise.allSettled([
+    loadSettings(),
+    loadPosts(),
+    initializeAmbientSound()
+  ]);
 }
-async function loadSettings() {
-  if (!client) return;
-  const { data } = await client
-    .from("blog_settings")
-    .select("setting_key,setting_value")
-    .eq("is_public", true);
-  for (const s of data || []) {
-    if (s.setting_key === "site_identity") {
-      heroTitle.childNodes[0].nodeValue =
-        (s.setting_value.hero_title || "PROCURE UM NOME.") + " ";
-      heroAccent.textContent = s.setting_value.hero_accent || "";
-      footerText.textContent = s.setting_value.footer || "";
+
+function mapElements() {
+  elements.clock =
+    document.getElementById("clock");
+
+  elements.soundToggle =
+    document.getElementById("soundToggle");
+
+  elements.searchForm =
+    document.getElementById("searchForm");
+
+  elements.searchInput =
+    document.getElementById("searchInput");
+
+  elements.searchStatus =
+    document.getElementById("searchStatus");
+
+  elements.postCount =
+    document.getElementById("postCount");
+
+  elements.posts =
+    document.getElementById("posts");
+
+  elements.heroTitle =
+    document.getElementById("heroTitle");
+
+  elements.heroAccent =
+    document.getElementById("heroAccent");
+
+  elements.footerText =
+    document.getElementById("footerText");
+
+  elements.modal =
+    document.getElementById("modal");
+
+  elements.modalType =
+    document.getElementById("modalType");
+
+  elements.modalTitle =
+    document.getElementById("modalTitle");
+
+  elements.modalImage =
+    document.getElementById("modalImage");
+
+  elements.modalContent =
+    document.getElementById("modalContent");
+}
+
+function configureClock() {
+  const update = () => {
+    if (elements.clock) {
+      elements.clock.textContent =
+        new Date().toLocaleTimeString("pt-BR");
     }
-    if (s.setting_key === "search" && s.setting_value.placeholder)
-      searchInput.placeholder = s.setting_value.placeholder;
+  };
+
+  update();
+  setInterval(update, 1000);
+}
+
+function configureSoundButton() {
+  updateSoundButton();
+
+  elements.soundToggle?.addEventListener(
+    "click",
+    async () => {
+      sound = !window.FFAudio.isEnabled();
+
+      window.FFAudio.setEnabled(sound);
+
+      updateSoundButton();
+    }
+  );
+
+  window.addEventListener(
+    "ff-sound-change",
+    updateSoundButton
+  );
+}
+
+function updateSoundButton() {
+  sound =
+    window.FFAudio?.isEnabled() ?? true;
+
+  if (elements.soundToggle) {
+    elements.soundToggle.textContent =
+      `SOM: ${sound ? "LIGADO" : "DESLIGADO"}`;
   }
 }
+
+async function initializeAmbientSound() {
+  await window.FFAudio.loadSettings(
+    client,
+    "site"
+  );
+
+  if (window.FFAudio.isEnabled()) {
+    window.FFAudio.startAmbient().catch(() => {
+      // A primeira interação do usuário tentará novamente.
+    });
+  }
+}
+
+function configureSearch() {
+  elements.searchForm?.addEventListener(
+    "submit",
+    search
+  );
+}
+
+function configureModal() {
+  document
+    .querySelectorAll("[data-close]")
+    .forEach((element) => {
+      element.addEventListener(
+        "click",
+        closeModal
+      );
+    });
+
+  document.addEventListener(
+    "keydown",
+    (event) => {
+      if (event.key === "Escape") {
+        closeModal();
+      }
+    }
+  );
+}
+
+function closeModal() {
+  if (elements.modal) {
+    elements.modal.hidden = true;
+  }
+}
+
+async function loadSettings() {
+  const { data, error } = await client
+    .from("blog_settings")
+    .select("setting_key, setting_value")
+    .eq("is_public", true);
+
+  if (error) {
+    console.warn(error);
+    return;
+  }
+
+  for (const setting of data || []) {
+    if (setting.setting_key === "site_identity") {
+      const value = setting.setting_value || {};
+
+      if (elements.heroTitle?.firstChild) {
+        elements.heroTitle.firstChild.nodeValue =
+          `${value.hero_title || "PROCURE UM NOME."} `;
+      }
+
+      if (elements.heroAccent) {
+        elements.heroAccent.textContent =
+          value.hero_accent || "";
+      }
+
+      if (elements.footerText) {
+        elements.footerText.textContent =
+          value.footer || "";
+      }
+    }
+
+    if (
+      setting.setting_key === "search" &&
+      setting.setting_value?.placeholder &&
+      elements.searchInput
+    ) {
+      elements.searchInput.placeholder =
+        setting.setting_value.placeholder;
+    }
+  }
+}
+
 async function loadPosts() {
-  if (!client) return;
-  const { data, count } = await client
+  const { data, count, error } = await client
     .from("blog_posts")
-    .select("id,title,excerpt,published_at,author_name", { count: "exact" })
+    .select(
+      "id,title,excerpt,published_at,author_name",
+      {
+        count: "exact"
+      }
+    )
     .eq("status", "published")
-    .order("published_at", { ascending: false })
+    .order("published_at", {
+      ascending: false
+    })
     .limit(6);
-  postCount.textContent = count ?? 0;
-  if (!data?.length) return;
-  posts.innerHTML = data
+
+  if (error) {
+    console.warn(error);
+    return;
+  }
+
+  if (elements.postCount) {
+    elements.postCount.textContent =
+      String(count ?? 0);
+  }
+
+  if (!data?.length || !elements.posts) {
+    return;
+  }
+
+  elements.posts.innerHTML = data
     .map(
-      (p, i) =>
-        `<article><small>${String(i + 1).padStart(3, "0")}</small><h3>${esc(p.title)}</h3><p>${esc(p.excerpt || "")}</p><small>${p.published_at ? new Date(p.published_at).toLocaleDateString("pt-BR") : ""}</small></article>`,
+      (post, index) => `
+        <article>
+          <small>
+            ${String(index + 1).padStart(3, "0")}
+          </small>
+
+          <h3>${escapeHTML(post.title)}</h3>
+
+          <p>${escapeHTML(post.excerpt || "")}</p>
+
+          <small>
+            ${
+              post.published_at
+                ? new Date(
+                    post.published_at
+                  ).toLocaleDateString("pt-BR")
+                : ""
+            }
+          </small>
+        </article>
+      `
     )
     .join("");
 }
-async function search(e) {
-  e.preventDefault();
-  const q = searchInput.value.trim();
-  if (!q) return show("Digite alguma coisa.");
-  if (!client) return show("Arquivo desconectado.");
-  show("CONSULTANDO...");
-  const state = FFProgress.get();
-  state.search_count = (state.search_count || 0) + 1;
-  FFProgress.save(state);
-  const { data, error } = await client.rpc("resolve_archive_search", {
-    p_query: q,
-    p_player_state: state,
-  });
-  if (error) return show("O arquivo não respondeu.");
-  if (!data?.found) return show("Nenhum registro reconheceu essa consulta.");
-  const en = data.entry || {};
-  FFProgress.addFlags(en.unlock_flags || []);
-  if (data.event) FFEffects.runEvent(data.event);
+
+async function search(event) {
+  event.preventDefault();
+
+  const query =
+    elements.searchInput?.value?.trim() || "";
+
+  if (!query) {
+    showSearchStatus(
+      "Digite alguma coisa."
+    );
+    return;
+  }
+
+  if (!client) {
+    showSearchStatus(
+      "Arquivo desconectado."
+    );
+    return;
+  }
+
+  window.FFAudio?.startAmbient().catch(() => {});
+
+  showSearchStatus("CONSULTANDO...");
+
+  const state = window.FFProgress.get();
+
+  state.search_count =
+    Number(state.search_count || 0) + 1;
+
+  window.FFProgress.save(state);
+
+  const { data, error } = await client.rpc(
+    "resolve_archive_search",
+    {
+      p_query: query,
+      p_player_state: state
+    }
+  );
+
+  if (error) {
+    showSearchStatus(
+      "O arquivo não respondeu."
+    );
+    console.error(error);
+    return;
+  }
+
+  if (!data?.found) {
+    showSearchStatus(
+      "Nenhum registro reconheceu essa consulta."
+    );
+    return;
+  }
+
+  const entry = data.entry || {};
+
+  window.FFProgress.addFlags(
+    entry.unlock_flags || []
+  );
+
+  if (data.event) {
+    window.FFEffects.runEvent(data.event);
+  }
+
   if (data.chat) {
-    location.href = `chat.html?chat=${encodeURIComponent(data.chat.chat_key)}`;
+    location.href =
+      `chat.html?chat=${encodeURIComponent(
+        data.chat.chat_key
+      )}`;
     return;
   }
+
   if (data.page) {
-    location.href = `secret.html?slug=${encodeURIComponent(data.page.slug)}`;
+    location.href =
+      `secret.html?slug=${encodeURIComponent(
+        data.page.slug
+      )}`;
     return;
   }
-  if (en.destination_url) {
-    location.assign(en.destination_url);
+
+  if (entry.destination_url) {
+    location.assign(entry.destination_url);
     return;
   }
-  const item = data.character || data.post || data.resource || en;
-  openResult(en.entry_type, item, en);
-  if (en.response_audio_url) FFEffects.play(en.response_audio_url);
+
+  const item =
+    data.character ||
+    data.post ||
+    data.resource ||
+    entry;
+
+  openResult(
+    entry.entry_type,
+    item,
+    entry
+  );
+
+  if (entry.response_audio_url) {
+    window.FFEffects.play(
+      entry.response_audio_url
+    );
+  }
 }
-function openResult(type, item, en) {
-  modalType.textContent = (type || "REGISTRO").toUpperCase();
-  modalTitle.textContent =
-    item.name || item.title || en.response_title || "REGISTRO";
-  modalContent.textContent =
+
+function openResult(type, item, entry) {
+  if (!elements.modal) {
+    return;
+  }
+
+  elements.modalType.textContent =
+    String(type || "REGISTRO").toUpperCase();
+
+  elements.modalTitle.textContent =
+    item.name ||
+    item.title ||
+    entry.response_title ||
+    "REGISTRO";
+
+  elements.modalContent.textContent =
     item.full_content ||
     item.public_description ||
     item.content ||
     item.excerpt ||
     item.description ||
-    en.response_message ||
+    entry.response_message ||
     "";
-  const img =
-    item.portrait_url || item.cover_image_url || en.response_image_url;
-  if (img) {
-    modalImage.src = img;
-    modalImage.hidden = false;
-  } else modalImage.hidden = true;
-  modal.hidden = false;
+
+  const image =
+    item.portrait_url ||
+    item.cover_image_url ||
+    entry.response_image_url;
+
+  if (image) {
+    elements.modalImage.src = image;
+    elements.modalImage.hidden = false;
+  } else {
+    elements.modalImage.hidden = true;
+    elements.modalImage.removeAttribute("src");
+  }
+
+  elements.modal.hidden = false;
 }
-function show(t) {
-  searchStatus.textContent = t;
-  searchStatus.hidden = false;
+
+function showSearchStatus(text) {
+  if (!elements.searchStatus) {
+    return;
+  }
+
+  elements.searchStatus.textContent = text;
+  elements.searchStatus.hidden = false;
 }
-function esc(v) {
-  const d = document.createElement("div");
-  d.textContent = v || "";
-  return d.innerHTML;
+
+function escapeHTML(value) {
+  const element =
+    document.createElement("div");
+
+  element.textContent =
+    String(value || "");
+
+  return element.innerHTML;
 }

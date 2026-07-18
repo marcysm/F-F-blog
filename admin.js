@@ -207,6 +207,7 @@ const sections = [
   "search",
   "resources",
   "media",
+  "audio",
   "events",
   "pages",
   "chats",
@@ -300,6 +301,7 @@ function buildNav() {
     search: "PESQUISA",
     resources: "RECURSOS",
     media: "MÍDIA",
+    audio: "ÁUDIO DO SITE",
     events: "EVENTOS",
     pages: "PÁGINAS SECRETAS",
     chats: "CHATS",
@@ -322,6 +324,7 @@ async function show(s) {
     s === "overview" ? "VISÃO GERAL" : defs[s]?.title || "MÍDIA";
   if (s === "overview") return overview();
   if (s === "media") return mediaView();
+  if (s === "audio") return audioView();
   return listView(s);
 }
 async function overview() {
@@ -555,12 +558,309 @@ async function toggleStatus(s, id) {
   if (error) alert(error.message);
   else show(s);
 }
+
+async function audioView() {
+  const [
+    settingsResult,
+    mediaResult
+  ] = await Promise.all([
+    A.client
+      .from("blog_settings")
+      .select("*")
+      .eq("setting_key", "audio")
+      .maybeSingle(),
+
+    A.client
+      .from("blog_media")
+      .select(
+        "id,title,file_name,public_url,media_type,mime_type"
+      )
+      .or(
+        "media_type.eq.audio,mime_type.ilike.audio/%"
+      )
+      .order("created_at", {
+        ascending: false
+      })
+  ]);
+
+  const current =
+    settingsResult.data?.setting_value || {};
+
+  const audioFiles =
+    mediaResult.data || [];
+
+  content.innerHTML = `
+    <section class="audio-admin">
+      <div class="help">
+        <b>SOM AMBIENTE</b>
+
+        <p>
+          O navegador só permite iniciar áudio depois de
+          uma interação do jogador. O site tentará tocar
+          o ambiente no primeiro clique, tecla ou pesquisa.
+        </p>
+      </div>
+
+      <form id="audioSettingsForm" class="audio-form">
+        <div class="field full">
+          <label>
+            <input
+              name="enabled"
+              type="checkbox"
+              ${current.enabled !== false ? "checked" : ""}
+            >
+            Som ambiente ativado
+          </label>
+        </div>
+
+        <div class="field full">
+          <label>Áudio da biblioteca</label>
+
+          <select name="ambient_url">
+            <option value="">
+              — Nenhum áudio selecionado —
+            </option>
+
+            ${audioFiles
+              .map((file) => `
+                <option
+                  value="${esc(file.public_url || "")}"
+                  ${
+                    current.ambient_url === file.public_url
+                      ? "selected"
+                      : ""
+                  }
+                >
+                  ${esc(file.title || file.file_name)}
+                </option>
+              `)
+              .join("")}
+          </select>
+        </div>
+
+        <div class="field">
+          <label>Volume de 0 a 1</label>
+
+          <input
+            name="volume"
+            type="number"
+            min="0"
+            max="1"
+            step="0.01"
+            value="${Number(current.volume ?? 0.18)}"
+          >
+        </div>
+
+        <div class="field">
+          <label>Fade de entrada em milissegundos</label>
+
+          <input
+            name="fade_in_ms"
+            type="number"
+            min="0"
+            value="${Number(current.fade_in_ms ?? 2500)}"
+          >
+        </div>
+
+        <div class="field">
+          <label>Fade de saída em milissegundos</label>
+
+          <input
+            name="fade_out_ms"
+            type="number"
+            min="0"
+            value="${Number(current.fade_out_ms ?? 900)}"
+          >
+        </div>
+
+        <div class="field">
+          <label>
+            <input
+              name="loop"
+              type="checkbox"
+              ${current.loop !== false ? "checked" : ""}
+            >
+            Repetir continuamente
+          </label>
+        </div>
+
+        <div class="field">
+          <label>
+            <input
+              name="play_on_site"
+              type="checkbox"
+              ${current.play_on_site !== false ? "checked" : ""}
+            >
+            Tocar no site público
+          </label>
+        </div>
+
+        <div class="field">
+          <label>
+            <input
+              name="play_on_chat"
+              type="checkbox"
+              ${current.play_on_chat !== false ? "checked" : ""}
+            >
+            Tocar no chat
+          </label>
+        </div>
+
+        <div class="field">
+          <label>
+            <input
+              name="play_on_secret"
+              type="checkbox"
+              ${current.play_on_secret !== false ? "checked" : ""}
+            >
+            Tocar nas páginas secretas
+          </label>
+        </div>
+
+        <div class="form-actions full">
+          <button
+            id="testAmbientButton"
+            type="button"
+          >
+            TESTAR SOM
+          </button>
+
+          <button type="submit">
+            SALVAR CONFIGURAÇÃO
+          </button>
+        </div>
+      </form>
+
+      <div class="help">
+        <b>TOM GRAVE PARA EVENTOS</b>
+
+        <p>
+          Nos eventos ou ações do chat, escolha
+          <code>generated_tone</code>. O padrão atualizado
+          usa duas camadas graves, filtro e distorção.
+        </p>
+      </div>
+    </section>
+  `;
+
+  const form =
+    document.getElementById("audioSettingsForm");
+
+  document
+    .getElementById("testAmbientButton")
+    .onclick = async () => {
+      const formData =
+        new FormData(form);
+
+      window.FFAudio.settings = {
+        enabled:
+          form.elements.enabled.checked,
+
+        ambient_url:
+          formData.get("ambient_url") || "",
+
+        volume:
+          Number(formData.get("volume") || 0.18),
+
+        fade_in_ms:
+          Number(formData.get("fade_in_ms") || 0),
+
+        fade_out_ms:
+          Number(formData.get("fade_out_ms") || 0),
+
+        loop:
+          form.elements.loop.checked,
+
+        play_on_site: true,
+        play_on_chat: true,
+        play_on_secret: true
+      };
+
+      window.FFAudio.contextName = "site";
+      window.FFAudio.setEnabled(true);
+
+      await window.FFAudio
+        .startAmbient()
+        .catch((error) => {
+          alert(
+            "Não foi possível tocar o arquivo: " +
+            error.message
+          );
+        });
+    };
+
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+
+    const formData =
+      new FormData(form);
+
+    const value = {
+      enabled:
+        form.elements.enabled.checked,
+
+      ambient_url:
+        formData.get("ambient_url") || "",
+
+      volume:
+        Number(formData.get("volume") || 0.18),
+
+      loop:
+        form.elements.loop.checked,
+
+      fade_in_ms:
+        Number(formData.get("fade_in_ms") || 0),
+
+      fade_out_ms:
+        Number(formData.get("fade_out_ms") || 0),
+
+      play_on_site:
+        form.elements.play_on_site.checked,
+
+      play_on_chat:
+        form.elements.play_on_chat.checked,
+
+      play_on_secret:
+        form.elements.play_on_secret.checked
+    };
+
+    const payload = {
+      setting_key: "audio",
+      setting_value: value,
+      description:
+        "Som ambiente configurável do site.",
+      is_public: true,
+      updated_by: A.user.id
+    };
+
+    const query =
+      settingsResult.data?.id
+        ? A.client
+            .from("blog_settings")
+            .update(payload)
+            .eq("id", settingsResult.data.id)
+        : A.client
+            .from("blog_settings")
+            .insert(payload);
+
+    const { error } = await query;
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert("Configuração de áudio salva.");
+    show("audio");
+  };
+}
+
 async function mediaView() {
   const { data } = await A.client
     .from("blog_media")
     .select("*")
     .order("created_at", { ascending: false });
-  content.innerHTML = `<div class="toolbar"><div><input id="mediaFile" type="file"><input id="mediaFolder" placeholder="pasta" value="geral"></div><button id="uploadMedia">ENVIAR MÍDIA</button></div><div class="media-grid">${(data || []).map((m) => `<article class="media-card">${m.media_type === "image" ? `<img src="${m.public_url}" alt="">` : ""}<b>${esc(m.title || m.file_name)}</b><p>${esc(m.folder)}</p><div class="actions"><button data-copy="${m.public_url}">COPIAR URL</button><button data-mdel="${m.id}" data-path="${m.storage_path}">EXCLUIR</button></div></article>`).join("")}</div>`;
+  content.innerHTML = `<div class="toolbar"><div><input id="mediaFile" type="file"><input id="mediaFolder" placeholder="pasta" value="geral"></div><button id="uploadMedia">ENVIAR MÍDIA</button></div><div class="media-grid">${(data || []).map((m) => `<article class="media-card">${["image", "imagem"].includes(m.media_type) ? `<img src="${m.public_url}" alt="">` : ""}<b>${esc(m.title || m.file_name)}</b><p>${esc(m.folder)}</p><div class="actions"><button data-copy="${m.public_url}">COPIAR URL</button><button data-mdel="${m.id}" data-path="${m.storage_path}">EXCLUIR</button></div></article>`).join("")}</div>`;
   uploadMedia.onclick = upload;
   content
     .querySelectorAll("[data-copy]")
@@ -573,125 +873,79 @@ async function mediaView() {
       (b) => (b.onclick = () => deleteMedia(b.dataset.mdel, b.dataset.path)),
     );
 }
-
 async function upload() {
-  const fileInput = document.getElementById("mediaFile");
-  const folderInput = document.getElementById("mediaFolder");
-
-  const file = fileInput?.files?.[0];
-
-  if (!file) {
-    alert("Escolha um arquivo.");
-    return;
-  }
-
-  const extension =
-    file.name
-      .split(".")
-      .pop()
-      ?.toLowerCase() || "";
-
-  const correctedMimeTypes = {
-    mp3: "audio/mpeg",
-    mpeg: "audio/mpeg",
-    ogg: "audio/ogg",
-    oga: "audio/ogg",
-    wav: "audio/wav",
-    m4a: "audio/mp4",
-    aac: "audio/aac",
-    png: "image/png",
-    jpg: "image/jpeg",
-    jpeg: "image/jpeg",
-    webp: "image/webp",
-    gif: "image/gif",
-    mp4: "video/mp4",
-    webm: "video/webm",
-    pdf: "application/pdf"
-  };
-
-  const correctedMimeType =
-    correctedMimeTypes[extension] ||
-    file.type ||
-    "application/octet-stream";
-
-  const folder =
-    slug(folderInput?.value || "geral");
-
-  const safeFileName =
-    slug(
-      file.name.replace(
-        /\.[^.]+$/,
-        ""
-      )
-    );
-
-  const path =
-    `${folder}/${Date.now()}-${safeFileName}.${extension}`;
-
-  const { error: uploadError } =
-    await A.client.storage
-      .from(FF_STORAGE_BUCKET)
-      .upload(
-        path,
-        file,
-        {
-          contentType: correctedMimeType,
-          upsert: false
-        }
-      );
-
-  if (uploadError) {
-    alert(uploadError.message);
-    return;
-  }
-
-  const { data: publicData } =
-    A.client.storage
-      .from(FF_STORAGE_BUCKET)
-      .getPublicUrl(path);
-
-  const mediaType =
-    correctedMimeType.startsWith("image/")
-      ? "image"
-      : correctedMimeType.startsWith("audio/")
-        ? "audio"
-        : correctedMimeType.startsWith("video/")
-          ? "video"
-          : correctedMimeType === "application/pdf"
-            ? "document"
-            : "other";
-
-  const { error: databaseError } =
-    await A.client
-      .from("blog_media")
-      .insert({
-        title: file.name,
-        file_name: file.name,
-        storage_path: path,
-        public_url:
-          publicData.publicUrl,
-        media_type: mediaType,
-        mime_type:
-          correctedMimeType,
-        file_size: file.size,
-        folder,
-        uploaded_by: A.user.id
-      });
-
-  if (databaseError) {
-    alert(databaseError.message);
-    return;
-  }
-
+  const f = mediaFile.files[0];
+  if (!f) return alert("Escolha um arquivo.");
+  const folder = slug(mediaFolder.value || "geral"),
+    path = `${folder}/${Date.now()}-${slug(f.name)}`;
+  const { error } = await A.client.storage
+    .from(FF_STORAGE_BUCKET)
+    .upload(path, f);
+  if (error) return alert(error.message);
+  const { data: u } = A.client.storage
+    .from(FF_STORAGE_BUCKET)
+    .getPublicUrl(path);
+  const type = f.type.startsWith("image/")
+    ? "imagem"
+    : f.type.startsWith("audio/")
+      ? "audio"
+      : f.type.startsWith("video/")
+        ? "video"
+        : f.type === "application/pdf"
+          ? "documento"
+          : "outro";
+  const { error: e } = await A.client
+    .from("blog_media")
+    .insert({
+      title: f.name,
+      file_name: f.name,
+      storage_path: path,
+      public_url: u.publicUrl,
+      media_type: type,
+      mime_type: f.type,
+      file_size: f.size,
+      folder,
+      uploaded_by: A.user.id,
+    });
+  if (e) alert(e.message);
+  else mediaView();
+}
+async function deleteMedia(id, path) {
+  if (!confirm("Excluir mídia?")) return;
+  await A.client.storage.from(FF_STORAGE_BUCKET).remove([path]);
+  await A.client.from("blog_media").delete().eq("id", id);
   mediaView();
 }
-
+let stepData = [];
+async function loadSteps(eventId) {
+  stepData = [];
+  if (eventId) {
+    const { data } = await A.client
+      .from("blog_event_steps")
+      .select("*")
+      .eq("event_id", eventId)
+      .order("step_order");
+    stepData = data || [];
+  }
+  renderSteps();
+  addStep.onclick = () => {
+    stepData.push({
+      action_type: "delay",
+      duration_ms: 1000,
+      delay_before_ms: 0,
+      text_content: "",
+      media_url: "",
+      target_url: "",
+    });
+    renderSteps();
+  };
+}
 function renderSteps() {
   if (!window.stepList) return;
   stepList.innerHTML = stepData
     .map(
       (s, i) =>
-        `<div class="step-card"><b>PASSO ${i + 1}</b><select data-step="${i}" data-k="action_type">${["delay", "glitch", "shake", "blackout", "flash", "darken_left", "darken_right", "show_text", "show_image", "play_audio", "redirect", "clear_effects"].map((x) => `<option ${s.action_type === x ? "selected" : ""}>${x}</option>`).join("")}</select><input data-step="${i}" data-k="duration_ms" type="number" value="${s.duration_ms || 1000}" placeholder="duração"><input data-step="${i}" data-k="text_content" value="${esc(s.text_content || "")}" placeholder="texto"><input data-step="${i}" data-k="media_url" value="${esc(s.media_url || "")}" placeholder="mídia"><input data-step="${i}" data-k="target_url" value="${esc(s.target_url || "")}" placeholder="destino"><button type="button" data-stepdel="${i}">EXCLUIR</button></div>`,
+        `<div class="step-card"><b>PASSO ${i + 1}</b><select data-step="${i}" data-k="action_type">${["delay", "glitch", "shake", "blackout", "flash", "darken_left", "darken_right", "show_text", "show_image", "play_audio", "generated_tone", "redirect", "clear_effects"].map((x) => `<option ${s.action_type === x ? "selected" : ""}>${x}</option>`).join("")}</select><input data-step="${i}" data-k="duration_ms" type="number" value="${s.duration_ms || 1000}" placeholder="duração"><input data-step="${i}" data-k="text_content" value="${esc(s.text_content || "")}" placeholder="texto"><input data-step="${i}" data-k="media_url" value="${esc(s.media_url || "")}" placeholder="mídia"><input data-step="${i}" data-k="target_url" value="${esc(s.target_url || "")}" placeholder="destino"><button type="button" data-stepdel="${i}">EXCLUIR</button></div>`,
     )
     .join("");
   stepList.querySelectorAll("[data-step]").forEach(
